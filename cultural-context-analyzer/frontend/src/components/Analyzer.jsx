@@ -27,10 +27,14 @@ import {
   Pause,
   Upload,
   Image as ImageIcon,
-  X as XIcon
+  X as XIcon,
+  Mic,
+  MicOff,
+  Paperclip
 } from 'lucide-react';
 import { EntityHighlight, EntityLegend, EntitySummary } from './EntityHighlight';
 import { speakText, stopSpeaking, isSpeaking, pauseSpeaking, resumeSpeaking } from '../utils/textToSpeech';
+import speechToText, { getSpeechLanguageCode } from '../utils/speechToText';
 
 function Analyzer() {
   const [text, setText] = useState('');
@@ -50,6 +54,8 @@ function Analyzer() {
   const [imagePreview, setImagePreview] = useState(null);
   const [extractedText, setExtractedText] = useState('');
   const [showImageUpload, setShowImageUpload] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState('');
 
   // Load user from localStorage
   useEffect(() => {
@@ -144,7 +150,7 @@ function Analyzer() {
       stopSpeaking();
       setSpeakingSection(sectionName);
       setSpeechPaused(false);
-      
+
       speakText(text, language, () => {
         // On end callback
         setSpeakingSection(null);
@@ -157,6 +163,62 @@ function Analyzer() {
     stopSpeaking();
     setSpeakingSection(null);
     setSpeechPaused(false);
+  };
+
+  const handleStartRecording = () => {
+    if (!speechToText.isSupported()) {
+      setError('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
+      return;
+    }
+
+    setIsRecording(true);
+    setError(null);
+    setInterimTranscript('');
+
+    const speechLangCode = getSpeechLanguageCode(language);
+
+    speechToText.start(
+      speechLangCode,
+      (result) => {
+        // Handle speech result
+        if (result.isFinal && result.finalTranscript) {
+          // Append final transcript to existing text
+          setText(prev => {
+            const newText = prev ? prev + ' ' + result.finalTranscript : result.finalTranscript;
+            return newText;
+          });
+          setInterimTranscript('');
+        } else if (result.interimTranscript) {
+          // Show interim results
+          setInterimTranscript(result.interimTranscript);
+        }
+      },
+      (error) => {
+        // Handle error
+        console.error('Speech recognition error:', error);
+        setIsRecording(false);
+        setInterimTranscript('');
+
+        if (error === 'no-speech') {
+          setError('No speech detected. Please try again.');
+        } else if (error === 'not-allowed') {
+          setError('Microphone access denied. Please allow microphone access in your browser settings.');
+        } else {
+          setError('Speech recognition error. Please try again.');
+        }
+      },
+      () => {
+        // Handle end
+        setIsRecording(false);
+        setInterimTranscript('');
+      }
+    );
+  };
+
+  const handleStopRecording = () => {
+    speechToText.stop();
+    setIsRecording(false);
+    setInterimTranscript('');
   };
 
   const handleImageSelect = (e) => {
@@ -261,6 +323,7 @@ function Analyzer() {
   useEffect(() => {
     return () => {
       stopSpeaking();
+      speechToText.stop();
       if (imagePreview) {
         URL.revokeObjectURL(imagePreview);
       }
@@ -302,7 +365,7 @@ function Analyzer() {
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{backgroundColor: '#e6f7f9', color: '#0A5569'}}
+                style={{ backgroundColor: '#e6f7f9', color: '#0A5569' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ccf2f6'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#e6f7f9'}
               >
@@ -317,20 +380,20 @@ function Analyzer() {
         <header className="text-center mb-20">
           <div className="max-w-4xl mx-auto">
             {/* Main title - clean and professional */}
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight" 
-                style={{color: '#0A5569', lineHeight: '1.1'}}>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight"
+              style={{ color: '#0A5569', lineHeight: '1.1' }}>
               Cultural Context Analyzer
             </h1>
-            
+
             {/* Subtitle */}
             <p className="text-xl md:text-2xl text-gray-600 mb-8 font-light leading-relaxed">
               AI-powered insights into the cultural heritage of literature and historical texts
             </p>
-            
+
             {/* Stats/Features - clean grid */}
             <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto mt-12">
               <div className="text-center">
-                <div className="text-3xl font-bold mb-2" style={{color: '#0A5569'}}>12+</div>
+                <div className="text-3xl font-bold mb-2" style={{ color: '#0A5569' }}>12+</div>
                 <div className="text-sm text-gray-600 font-medium">Languages</div>
               </div>
             </div>
@@ -341,7 +404,7 @@ function Analyzer() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Input Section */}
           <div className="lg:col-span-2">
-                        <div className="card">
+            <div className="card">
               <div className="flex items-center gap-3 mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">
                   Enter Text to Analyze
@@ -369,108 +432,139 @@ function Analyzer() {
                   </p>
                 </div>
 
-                {/* Image Upload Section */}
-                <div className="border-2 border-dashed rounded-lg p-4" style={{borderColor: '#b3dfe6'}}>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      <ImageIcon className="w-4 h-4 inline mr-1" />
-                      Upload Image (Optional)
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowImageUpload(!showImageUpload)}
-                      className="text-xs px-2 py-1 rounded"
-                      style={{color: '#0A5569', backgroundColor: '#e6f7f9'}}
-                    >
-                      {showImageUpload ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                  
-                  {showImageUpload && (
-                    <div className="space-y-3">
-                      {!imagePreview ? (
-                        <div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageSelect}
-                            className="hidden"
-                            id="image-upload"
-                            disabled={loading}
-                          />
-                          <label
-                            htmlFor="image-upload"
-                            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
-                            style={{borderColor: '#b3dfe6', backgroundColor: '#f0f9fa'}}
-                          >
-                            <Upload className="w-8 h-8 mb-2" style={{color: '#0A5569'}} />
-                            <p className="text-sm text-gray-600">
-                              Click to upload or drag and drop
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              PNG, JPG, GIF up to 20MB
-                            </p>
-                          </label>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="w-full max-h-64 object-contain rounded-lg border"
-                            style={{borderColor: '#b3dfe6'}}
-                          />
-                          <button
-                            type="button"
-                            onClick={handleRemoveImage}
-                            className="absolute top-2 right-2 p-1 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
-                            title="Remove image"
-                          >
-                            <XIcon className="w-4 h-4" />
-                          </button>
-                          <div className="mt-2 flex gap-2">
-                            <button
-                              type="button"
-                              onClick={handleExtractText}
-                              disabled={loading}
-                              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                              style={{backgroundColor: '#e6f7f9', color: '#0A5569'}}
-                            >
-                              {loading ? 'Extracting...' : 'Extract Text Only'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleAnalyzeImage}
-                              disabled={loading}
-                              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-                              style={{backgroundColor: '#0A5569'}}
-                            >
-                              {loading ? 'Analyzing...' : 'Extract & Analyze'}
-                            </button>
-                          </div>
-                          {extractedText && (
-                            <div className="mt-2 p-2 rounded bg-gray-50 text-sm text-gray-700 max-h-32 overflow-y-auto border" style={{borderColor: '#b3dfe6'}}>
-                              <p className="font-semibold mb-1 text-xs">Extracted Text ({extractedText.length} chars):</p>
-                              <p className="text-xs">{extractedText}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                {/* Hidden file input */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  id="image-attach"
+                  disabled={loading}
+                />
+
+                {/* Image Preview (if image selected) */}
+                {imagePreview && (
+                  <div className="relative border-2 rounded-lg p-3" style={{ borderColor: '#b3dfe6', backgroundColor: '#f0f9fa' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium" style={{ color: '#0A5569' }}>
+                        <ImageIcon className="w-4 h-4 inline mr-1" />
+                        Attached Image
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="p-1 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                        title="Remove image"
+                      >
+                        <XIcon className="w-4 h-4" />
+                      </button>
                     </div>
-                  )}
-                </div>
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full max-h-48 object-contain rounded-lg border bg-white"
+                      style={{ borderColor: '#b3dfe6' }}
+                    />
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleExtractText}
+                        disabled={loading}
+                        className="flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                        style={{ backgroundColor: '#e6f7f9', color: '#0A5569' }}
+                      >
+                        {loading ? 'Extracting...' : 'Extract Text Only'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAnalyzeImage}
+                        disabled={loading}
+                        className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                        style={{ backgroundColor: '#0A5569' }}
+                      >
+                        {loading ? 'Analyzing...' : 'Extract & Analyze'}
+                      </button>
+                    </div>
+                    {extractedText && (
+                      <div className="mt-2 p-2 rounded bg-white text-sm text-gray-700 max-h-32 overflow-y-auto border" style={{ borderColor: '#b3dfe6' }}>
+                        <p className="font-semibold mb-1 text-xs">Extracted Text ({extractedText.length} chars):</p>
+                        <p className="text-xs">{extractedText}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Text or Passage
                   </label>
-                  <textarea
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder="Enter a poem, historical text, cultural reference, or any passage you'd like to understand better... Or upload an image above to extract text automatically."
-                    className="input-field min-h-[200px] resize-y"
-                    disabled={loading}
-                  />
+                  <div className="relative">
+                    <textarea
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      placeholder="Enter a poem, historical text, cultural reference, or any passage you'd like to understand better... Use the attachment icon to add an image, or the microphone to speak!"
+                      className="input-field min-h-[200px] resize-y pr-28"
+                      disabled={loading}
+                    />
+                    {/* Action Buttons - Attachment and Microphone */}
+                    <div className="absolute bottom-3 right-3 flex gap-2">
+                      {/* Attachment/Image Button */}
+                      <label
+                        htmlFor="image-attach"
+                        className={`p-3 rounded-full transition-all cursor-pointer ${imagePreview ? 'bg-green-500 text-white' : 'hover:bg-gray-100'
+                          }`}
+                        style={{
+                          backgroundColor: imagePreview ? '#10b981' : '#e6f7f9',
+                          color: imagePreview ? 'white' : '#0A5569'
+                        }}
+                        title={imagePreview ? 'Image attached' : 'Attach image'}
+                      >
+                        <Paperclip className="w-5 h-5" />
+                      </label>
+
+                      {/* Microphone Button */}
+                      <button
+                        type="button"
+                        onClick={isRecording ? handleStopRecording : handleStartRecording}
+                        disabled={loading}
+                        className={`p-3 rounded-full transition-all ${isRecording
+                            ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                            : 'hover:bg-gray-100'
+                          }`}
+                        style={{
+                          backgroundColor: isRecording ? '#ef4444' : '#e6f7f9',
+                          color: isRecording ? 'white' : '#0A5569'
+                        }}
+                        title={isRecording ? 'Stop recording' : 'Start voice input'}
+                      >
+                        {isRecording ? (
+                          <MicOff className="w-5 h-5" />
+                        ) : (
+                          <Mic className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  {/* Interim transcript display */}
+                  {isRecording && interimTranscript && (
+                    <div className="mt-2 p-3 rounded-lg border-2" style={{ borderColor: '#b3dfe6', backgroundColor: '#f0f9fa' }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs font-semibold" style={{ color: '#0A5569' }}>Listening...</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 italic">{interimTranscript}</p>
+                    </div>
+                  )}
+                  {isRecording && !interimTranscript && (
+                    <div className="mt-2 p-3 rounded-lg border-2" style={{ borderColor: '#b3dfe6', backgroundColor: '#f0f9fa' }}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-semibold" style={{ color: '#0A5569' }}>Recording... Speak now</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Example Texts */}
@@ -483,7 +577,7 @@ function Analyzer() {
                         type="button"
                         onClick={() => setText(example)}
                         className="text-xs px-3 py-1 rounded-full transition-colors"
-                        style={{backgroundColor: '#e6f7f9', color: '#0A5569'}}
+                        style={{ backgroundColor: '#e6f7f9', color: '#0A5569' }}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ccf2f6'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#e6f7f9'}
                         disabled={loading}
@@ -547,7 +641,7 @@ function Analyzer() {
                             ✨ Interactive Cultural Context
                           </h3>
                           <EntityLegend />
-                          <div className="bg-white p-4 rounded-lg border-2" style={{borderColor: '#b3dfe6'}}>
+                          <div className="bg-white p-4 rounded-lg border-2" style={{ borderColor: '#b3dfe6' }}>
                             <EntityHighlight
                               text={result.input_text}
                               entities={result.detected_entities}
@@ -682,7 +776,7 @@ function Analyzer() {
                           <button
                             onClick={() => setShowTimeline(!showTimeline)}
                             className="text-sm flex items-center gap-1"
-                            style={{color: '#0A5569'}}
+                            style={{ color: '#0A5569' }}
                           >
                             {showTimeline ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             {showTimeline ? 'Collapse' : 'Expand'}
@@ -690,20 +784,20 @@ function Analyzer() {
                         </div>
 
                         {showTimeline && (
-                          <div className="relative pl-6 border-l-2 space-y-4" style={{borderColor: '#b3dfe6'}}>
+                          <div className="relative pl-6 border-l-2 space-y-4" style={{ borderColor: '#b3dfe6' }}>
                             {result.timeline_events.map((event, idx) => (
                               <div key={idx} className="relative">
-                                <div className="absolute -left-[25px] w-4 h-4 rounded-full border-4 border-white" style={{backgroundColor: '#0A5569'}}></div>
-                                <div className="p-4 rounded-lg" style={{backgroundColor: '#e6f7f9'}}>
+                                <div className="absolute -left-[25px] w-4 h-4 rounded-full border-4 border-white" style={{ backgroundColor: '#0A5569' }}></div>
+                                <div className="p-4 rounded-lg" style={{ backgroundColor: '#e6f7f9' }}>
                                   <div className="flex items-start justify-between gap-2 mb-2">
-                                    <span className="font-bold" style={{color: '#0A5569'}}>{event.year}</span>
-                                    <span className="text-xs px-2 py-1 rounded-full" style={{backgroundColor: '#b3dfe6', color: '#0A5569'}}>
+                                    <span className="font-bold" style={{ color: '#0A5569' }}>{event.year}</span>
+                                    <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: '#b3dfe6', color: '#0A5569' }}>
                                       Event {idx + 1}
                                     </span>
                                   </div>
                                   <h4 className="font-semibold text-gray-800 mb-1">{event.title}</h4>
                                   <p className="text-sm text-gray-700 mb-2">{event.description}</p>
-                                  <div className="text-xs bg-white p-2 rounded border" style={{color: '#0A5569', borderColor: '#b3dfe6'}}>
+                                  <div className="text-xs bg-white p-2 rounded border" style={{ color: '#0A5569', borderColor: '#b3dfe6' }}>
                                     <strong>Significance:</strong> {event.significance}
                                   </div>
                                 </div>
@@ -828,7 +922,7 @@ function Analyzer() {
                                         <h5 className="font-bold text-gray-800 mb-2">
                                           Cultural Context
                                         </h5>
-                                        <p className="text-gray-700 leading-relaxed p-3 rounded-lg" style={{backgroundColor: '#e6f7f9'}}>
+                                        <p className="text-gray-700 leading-relaxed p-3 rounded-lg" style={{ backgroundColor: '#e6f7f9' }}>
                                           {concept.context}
                                         </p>
                                       </div>
@@ -875,7 +969,7 @@ function Analyzer() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm hover:underline block"
-                                    style={{color: '#0A5569'}}
+                                    style={{ color: '#0A5569' }}
                                   >
                                     {link}
                                   </a>
@@ -897,7 +991,7 @@ function Analyzer() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm hover:underline block"
-                                    style={{color: '#0A5569'}}
+                                    style={{ color: '#0A5569' }}
                                   >
                                     {link}
                                   </a>
@@ -919,7 +1013,7 @@ function Analyzer() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm hover:underline block"
-                                    style={{color: '#0A5569'}}
+                                    style={{ color: '#0A5569' }}
                                   >
                                     {link}
                                   </a>
