@@ -45,9 +45,9 @@ Please provide your analysis in the following JSON format:
     "timeline_events": [
         {{
             "year": "YYYY or BCE/CE format",
-            "title": "Brief event title",
-            "description": "What happened and why it matters",
-            "significance": "Impact on culture/history"
+            "title": "Brief event title (MUST be about the cultural/historical period, NOT about the author)",
+            "description": "What happened and why it matters to understanding this cultural context",
+            "significance": "Impact on the culture/historical period being discussed"
         }}
     ],
     "geographic_locations": [
@@ -69,7 +69,6 @@ Please provide your analysis in the following JSON format:
     "external_resources": {{
         "timeline_links": ["URL to interactive timeline resources if available"],
         "map_links": ["URL to interactive map resources if available"],
-        "educational_videos": ["URL to educational video resources"],
         "further_reading": ["URL to articles or educational content"]
     }}
 }}
@@ -77,6 +76,11 @@ Please provide your analysis in the following JSON format:
 CRITICAL INSTRUCTIONS - CONDITIONAL FIELDS:
 1. **timeline_events**: ONLY include if the text has clear historical context with specific dates/periods. 
    - Include 3-5 events in chronological order if applicable
+   - **FOCUS ON EVENTS RELATED TO THE CULTURAL CONTEXT/HISTORICAL PERIOD DESCRIBED IN THE TEXT**
+   - DO NOT include author biography events (birth, death, publications) unless specifically relevant
+   - Include events that shaped the cultural/historical context: wars, movements, cultural shifts, inventions, etc.
+   - Example: For "Ramayana" → Include events about ancient Indian civilization, Hindu philosophy development, epic tradition
+   - Example: For "Renaissance art" → Include events like fall of Constantinople, printing press invention, Medici patronage
    - Return EMPTY ARRAY [] if text is modern, theoretical, or has no historical timeline
    
 2. **geographic_locations**: ONLY include if specific places/locations are relevant to understanding the text.
@@ -99,12 +103,14 @@ CRITICAL INSTRUCTIONS - CONDITIONAL FIELDS:
 EXAMPLES OF WHEN TO INCLUDE/EXCLUDE:
 
 ✅ INCLUDE timeline_events:
-- "The Ramayana is an ancient epic..." → Has clear historical periods
-- "The Renaissance began in 14th century..." → Specific historical timeline
+- "The Ramayana is an ancient epic..." → Events about ancient India (Vedic period, Hindu philosophy, epic tradition formation), NOT Valmiki's birth/death
+- "The Renaissance began in 14th century..." → Events like fall of Constantinople (1453), printing press invention (1440), Black Death impact
+- "Shakespeare's Hamlet explores..." → Events of Elizabethan era (Spanish Armada, theater culture, religious conflicts), NOT Shakespeare's birth/death
 
 ❌ EXCLUDE timeline_events:
 - "Democracy is a form of government..." → Concept, not historical event
 - "Mindfulness meditation involves..." → Practice, not tied to specific timeline
+- Modern texts without historical context
 
 ✅ INCLUDE geographic_locations:
 - "The Silk Road connected China to Rome..." → Specific places matter
@@ -129,7 +135,7 @@ Be accurate and factual. Return ONLY valid JSON, no additional text.
             # Generate content with safety settings to avoid blocking
             response = self.model.generate_content(
                 prompt,
-                generation_config={
+                generation_config={  # type: ignore
                     "temperature": 0.7,
                     "top_p": 0.95,
                     "top_k": 40,

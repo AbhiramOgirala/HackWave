@@ -559,28 +559,6 @@ function App() {
                             </div>
                           )}
 
-                          {result.external_resources.educational_videos?.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                📺 Educational Videos
-                              </h4>
-                              <div className="space-y-1">
-                                {result.external_resources.educational_videos.map((link, idx) => (
-                                  <a
-                                    key={idx}
-                                    href={link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-                                  >
-                                    <ExternalLink className="w-3 h-3" />
-                                    {link}
-                                  </a>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
                           {result.external_resources.further_reading?.length > 0 && (
                             <div>
                               <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
