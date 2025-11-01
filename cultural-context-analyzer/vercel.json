@@ -1,0 +1,13 @@
+﻿{
+  "buildCommand": "cd cultural-context-analyzer/frontend && npm install && npm run build",
+  "outputDirectory": "cultural-context-analyzer/frontend/dist",
+  "devCommand": "cd cultural-context-analyzer/frontend && npm run dev",
+  "installCommand": "cd cultural-context-analyzer/frontend && npm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

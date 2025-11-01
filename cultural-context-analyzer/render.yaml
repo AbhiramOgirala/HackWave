@@ -1,0 +1,17 @@
+﻿services:
+  - type: web
+    name: cultural-context-analyzer-api
+    env: docker
+    dockerfilePath: ./cultural-context-analyzer/backend/Dockerfile
+    dockerContext: ./cultural-context-analyzer/backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
