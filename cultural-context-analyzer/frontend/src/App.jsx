@@ -122,31 +122,50 @@ function App() {
   ];
 
   return (
-    <div className="min-h-screen py-8 px-4">
+    <div className="min-h-screen py-12 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <header className="text-center mb-12 animate-fade-in">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <BookOpen className="w-12 h-12 text-blue-600" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+        {/* Hero Section */}
+        <header className="text-center mb-20">
+          <div className="max-w-4xl mx-auto">
+            {/* Main title - clean and professional */}
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight" 
+                style={{color: '#0A5569', lineHeight: '1.1'}}>
               Cultural Context Analyzer
             </h1>
+            
+            {/* Subtitle */}
+            <p className="text-xl md:text-2xl text-gray-600 mb-8 font-light leading-relaxed">
+              AI-powered insights into the cultural heritage of literature and historical texts
+            </p>
+            
+            {/* Stats/Features - clean grid */}
+            <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto mt-12">
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-2" style={{color: '#0A5569'}}>12+</div>
+                <div className="text-sm text-gray-600 font-medium">Languages</div>
+              </div>
+              {/*<div className="text-center">
+                <div className="text-3xl font-bold mb-2" style={{color: '#0A5569'}}>AI</div>
+                <div className="text-sm text-gray-600 font-medium">Powered</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-2" style={{color: '#0A5569'}}>∞</div>
+                <div className="text-sm text-gray-600 font-medium">Insights</div>
+              </div>*/}
+            </div>
           </div>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Discover the rich cultural heritage behind literature and historical texts.
-            Get insights on cultural origins, cross-cultural connections, modern analogies, and visual context.
-          </p>
         </header>
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Input Section */}
           <div className="lg:col-span-2">
-            <div className="card animate-fade-in">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <Send className="w-6 h-6 text-blue-600" />
-                Enter Text to Analyze
-              </h2>
+                        <div className="card">
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Enter Text to Analyze
+                </h2>
+              </div>
 
               <form onSubmit={handleAnalyze} className="space-y-4">
                 <div>
@@ -189,7 +208,10 @@ function App() {
                         key={idx}
                         type="button"
                         onClick={() => setText(example)}
-                        className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-100 transition-colors"
+                        className="text-xs px-3 py-1 rounded-full transition-colors"
+                        style={{backgroundColor: '#e6f7f9', color: '#0A5569'}}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ccf2f6'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#e6f7f9'}
                         disabled={loading}
                       >
                         Example {idx + 1}
@@ -216,8 +238,7 @@ function App() {
                     </>
                   ) : (
                     <>
-                      <Send className="w-5 h-5" />
-                      Analyze Cultural Context
+                      Analyze Text
                     </>
                   )}
                 </button>
@@ -233,16 +254,13 @@ function App() {
                     <EntitySummary entities={result.detected_entities} />
 
                     <div className="section-card">
-                      <div className="flex items-start gap-3">
-                        <div className="bg-gradient-to-br from-purple-100 to-pink-100 p-3 rounded-lg">
-                          <Sparkles className="w-6 h-6 text-purple-600" />
-                        </div>
+                      <div className="flex items-start gap-4">
                         <div className="flex-1">
                           <h3 className="text-xl font-bold text-gray-800 mb-3">
                             ✨ Interactive Cultural Context
                           </h3>
                           <EntityLegend />
-                          <div className="bg-white p-4 rounded-lg border-2 border-purple-200">
+                          <div className="bg-white p-4 rounded-lg border-2" style={{borderColor: '#b3dfe6'}}>
                             <EntityHighlight
                               text={result.input_text}
                               entities={result.detected_entities}
@@ -259,10 +277,7 @@ function App() {
 
                 {/* Cultural Origin */}
                 <div className="section-card">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-100 p-3 rounded-lg">
-                      <Globe className="w-6 h-6 text-blue-600" />
-                    </div>
+                  <div className="flex items-start gap-4">
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
                         1. Cultural Origin
@@ -276,10 +291,7 @@ function App() {
 
                 {/* Cross-Cultural Connections */}
                 <div className="section-card">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-purple-100 p-3 rounded-lg">
-                      <Languages className="w-6 h-6 text-purple-600" />
-                    </div>
+                  <div className="flex items-start gap-4">
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
                         2. Cross-Cultural Connections
@@ -293,10 +305,7 @@ function App() {
 
                 {/* Modern Analogy */}
                 <div className="section-card">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-green-100 p-3 rounded-lg">
-                      <Lightbulb className="w-6 h-6 text-green-600" />
-                    </div>
+                  <div className="flex items-start gap-4">
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
                         3. Modern Analogy
@@ -312,9 +321,6 @@ function App() {
                 {result.timeline_events && result.timeline_events.length > 0 && (
                   <div className="section-card">
                     <div className="flex items-start gap-3">
-                      <div className="bg-indigo-100 p-3 rounded-lg">
-                        <Calendar className="w-6 h-6 text-indigo-600" />
-                      </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-xl font-bold text-gray-800">
@@ -322,7 +328,8 @@ function App() {
                           </h3>
                           <button
                             onClick={() => setShowTimeline(!showTimeline)}
-                            className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                            className="text-sm flex items-center gap-1"
+                            style={{color: '#0A5569'}}
                           >
                             {showTimeline ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             {showTimeline ? 'Collapse' : 'Expand'}
@@ -330,20 +337,20 @@ function App() {
                         </div>
 
                         {showTimeline && (
-                          <div className="relative pl-6 border-l-2 border-indigo-300 space-y-4">
+                          <div className="relative pl-6 border-l-2 space-y-4" style={{borderColor: '#b3dfe6'}}>
                             {result.timeline_events.map((event, idx) => (
                               <div key={idx} className="relative">
-                                <div className="absolute -left-[25px] w-4 h-4 rounded-full bg-indigo-600 border-4 border-white"></div>
-                                <div className="bg-indigo-50 p-4 rounded-lg">
+                                <div className="absolute -left-[25px] w-4 h-4 rounded-full border-4 border-white" style={{backgroundColor: '#0A5569'}}></div>
+                                <div className="p-4 rounded-lg" style={{backgroundColor: '#e6f7f9'}}>
                                   <div className="flex items-start justify-between gap-2 mb-2">
-                                    <span className="font-bold text-indigo-900">{event.year}</span>
-                                    <span className="text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full">
+                                    <span className="font-bold" style={{color: '#0A5569'}}>{event.year}</span>
+                                    <span className="text-xs px-2 py-1 rounded-full" style={{backgroundColor: '#b3dfe6', color: '#0A5569'}}>
                                       Event {idx + 1}
                                     </span>
                                   </div>
                                   <h4 className="font-semibold text-gray-800 mb-1">{event.title}</h4>
                                   <p className="text-sm text-gray-700 mb-2">{event.description}</p>
-                                  <div className="text-xs text-indigo-700 bg-white p-2 rounded border border-indigo-200">
+                                  <div className="text-xs bg-white p-2 rounded border" style={{color: '#0A5569', borderColor: '#b3dfe6'}}>
                                     <strong>Significance:</strong> {event.significance}
                                   </div>
                                 </div>
@@ -360,9 +367,6 @@ function App() {
                 {result.geographic_locations && result.geographic_locations.length > 0 && (
                   <div className="section-card">
                     <div className="flex items-start gap-3">
-                      <div className="bg-teal-100 p-3 rounded-lg">
-                        <MapPin className="w-6 h-6 text-teal-600" />
-                      </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-xl font-bold text-gray-800">
@@ -383,7 +387,6 @@ function App() {
                               <div key={idx} className="bg-teal-50 p-4 rounded-lg border border-teal-200">
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                   <h4 className="font-bold text-teal-900">{location.name}</h4>
-                                  <MapPin className="w-4 h-4 text-teal-600" />
                                 </div>
                                 {location.modern_name && location.modern_name !== location.name && (
                                   <p className="text-xs text-teal-700 mb-2">
@@ -399,7 +402,6 @@ function App() {
                                       rel="noopener noreferrer"
                                       className="text-xs bg-teal-600 text-white px-3 py-1 rounded-full hover:bg-teal-700 flex items-center gap-1"
                                     >
-                                      <ExternalLink className="w-3 h-3" />
                                       View on Google Maps
                                     </a>
                                     <span className="text-xs text-gray-500">
@@ -420,9 +422,6 @@ function App() {
                 {result.key_concepts && result.key_concepts.length > 0 && (
                   <div className="section-card">
                     <div className="flex items-start gap-3">
-                      <div className="bg-pink-100 p-3 rounded-lg">
-                        <BookMarked className="w-6 h-6 text-pink-600" />
-                      </div>
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-gray-800 mb-3">
                           📖 Key Concepts Explained
@@ -455,17 +454,16 @@ function App() {
                                         </div>
                                         <button
                                           onClick={() => setExpandedConcept(null)}
-                                          className="text-white hover:text-pink-200"
+                                          className="text-white hover:text-pink-200 text-2xl font-bold"
                                         >
-                                          <X className="w-6 h-6" />
+                                          ×
                                         </button>
                                       </div>
                                     </div>
 
                                     <div className="p-6 space-y-4">
                                       <div>
-                                        <h5 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                          <BookMarked className="w-5 h-5 text-pink-600" />
+                                        <h5 className="font-bold text-gray-800 mb-2">
                                           Definition
                                         </h5>
                                         <p className="text-gray-700 leading-relaxed bg-gray-50 p-3 rounded-lg">
@@ -474,18 +472,16 @@ function App() {
                                       </div>
 
                                       <div>
-                                        <h5 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                          <Globe className="w-5 h-5 text-blue-600" />
+                                        <h5 className="font-bold text-gray-800 mb-2">
                                           Cultural Context
                                         </h5>
-                                        <p className="text-gray-700 leading-relaxed bg-blue-50 p-3 rounded-lg">
+                                        <p className="text-gray-700 leading-relaxed p-3 rounded-lg" style={{backgroundColor: '#e6f7f9'}}>
                                           {concept.context}
                                         </p>
                                       </div>
 
                                       <div>
-                                        <h5 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                          <Lightbulb className="w-5 h-5 text-green-600" />
+                                        <h5 className="font-bold text-gray-800 mb-2">
                                           Modern Connection
                                         </h5>
                                         <p className="text-gray-700 leading-relaxed bg-green-50 p-3 rounded-lg">
@@ -508,9 +504,6 @@ function App() {
                 {result.external_resources && Object.keys(result.external_resources).some(key => result.external_resources[key]?.length > 0) && (
                   <div className="section-card">
                     <div className="flex items-start gap-3">
-                      <div className="bg-cyan-100 p-3 rounded-lg">
-                        <ExternalLink className="w-6 h-6 text-cyan-600" />
-                      </div>
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-gray-800 mb-3">
                           🔗 Learn More
@@ -518,8 +511,7 @@ function App() {
                         <div className="space-y-3">
                           {result.external_resources.timeline_links?.length > 0 && (
                             <div>
-                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
+                              <h4 className="font-semibold text-gray-700 mb-2">
                                 Interactive Timelines
                               </h4>
                               <div className="space-y-1">
@@ -529,9 +521,9 @@ function App() {
                                     href={link}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="block text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                    className="text-sm hover:underline block"
+                                    style={{color: '#0A5569'}}
                                   >
-                                    <ExternalLink className="w-3 h-3" />
                                     {link}
                                   </a>
                                 ))}
@@ -541,8 +533,7 @@ function App() {
 
                           {result.external_resources.map_links?.length > 0 && (
                             <div>
-                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                <MapPin className="w-4 h-4" />
+                              <h4 className="font-semibold text-gray-700 mb-2">
                                 Interactive Maps
                               </h4>
                               <div className="space-y-1">
@@ -552,9 +543,9 @@ function App() {
                                     href={link}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="block text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                    className="text-sm hover:underline block"
+                                    style={{color: '#0A5569'}}
                                   >
-                                    <ExternalLink className="w-3 h-3" />
                                     {link}
                                   </a>
                                 ))}
@@ -564,8 +555,8 @@ function App() {
 
                           {result.external_resources.further_reading?.length > 0 && (
                             <div>
-                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                📚 Further Reading
+                              <h4 className="font-semibold text-gray-700 mb-2">
+                                Further Reading
                               </h4>
                               <div className="space-y-1">
                                 {result.external_resources.further_reading.map((link, idx) => (
@@ -574,9 +565,9 @@ function App() {
                                     href={link}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="block text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                    className="text-sm hover:underline block"
+                                    style={{color: '#0A5569'}}
                                   >
-                                    <ExternalLink className="w-3 h-3" />
                                     {link}
                                   </a>
                                 ))}

@@ -56,14 +56,14 @@ export const EntityHighlight = ({ text, entities }) => {
         const significance = entity.cultural_significance || 'general';
 
         const colorMap = {
-            'mythological': 'bg-purple-100 border-purple-300 text-purple-800',
+            'mythological': 'bg-cyan-100 border-cyan-300 text-cyan-800',
             'historical': 'bg-amber-100 border-amber-300 text-amber-800',
-            'literary': 'bg-blue-100 border-blue-300 text-blue-800',
-            'philosophical': 'bg-indigo-100 border-indigo-300 text-indigo-800',
+            'literary': 'bg-teal-100 border-teal-300 text-teal-800',
+            'philosophical': 'bg-sky-100 border-sky-300 text-sky-800',
             'religious': 'bg-rose-100 border-rose-300 text-rose-800',
             'artistic': 'bg-pink-100 border-pink-300 text-pink-800',
             'geographical': 'bg-green-100 border-green-300 text-green-800',
-            'biographical': 'bg-teal-100 border-teal-300 text-teal-800',
+            'biographical': 'bg-emerald-100 border-emerald-300 text-emerald-800',
             'general': 'bg-gray-100 border-gray-300 text-gray-800'
         };
 
@@ -148,7 +148,8 @@ export const EntityHighlight = ({ text, entities }) => {
                                                     href={entity.url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-blue-600 hover:text-blue-800 flex items-center"
+                                                    className="flex items-center"
+                                                    style={{color: '#0A5569'}}
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     Learn More <ExternalLink className="w-3 h-3 ml-1" />
@@ -178,10 +179,10 @@ export const EntityHighlight = ({ text, entities }) => {
  */
 export const EntityLegend = () => {
     const categories = [
-        { name: 'Mythological', color: 'bg-purple-100 border-purple-300', icon: '🔮' },
+        { name: 'Mythological', color: 'bg-cyan-100 border-cyan-300', icon: '🔮' },
         { name: 'Historical', color: 'bg-amber-100 border-amber-300', icon: '📜' },
-        { name: 'Literary', color: 'bg-blue-100 border-blue-300', icon: '📚' },
-        { name: 'Philosophical', color: 'bg-indigo-100 border-indigo-300', icon: '💭' },
+        { name: 'Literary', color: 'bg-teal-100 border-teal-300', icon: '📚' },
+        { name: 'Philosophical', color: 'bg-sky-100 border-sky-300', icon: '💭' },
         { name: 'Religious', color: 'bg-rose-100 border-rose-300', icon: '🕊️' },
         { name: 'Geographical', color: 'bg-green-100 border-green-300', icon: '🌍' },
     ];
@@ -229,13 +230,13 @@ export const EntitySummary = ({ entities }) => {
     const enrichedCount = entities.filter(e => e.summary).length;
 
     return (
-        <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
+        <div className="rounded-lg p-4 mb-4 border" style={{backgroundColor: '#e6f7f9', borderColor: '#b3dfe6'}}>
             <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-blue-900 flex items-center">
+                <h3 className="font-semibold flex items-center" style={{color: '#0A5569'}}>
                     <Sparkles className="w-5 h-5 mr-2" />
                     Cultural Entities Detected
                 </h3>
-                <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                <span className="text-white px-3 py-1 rounded-full text-sm font-bold" style={{backgroundColor: '#0A5569'}}>
                     {entities.length}
                 </span>
             </div>
@@ -243,7 +244,7 @@ export const EntitySummary = ({ entities }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                 <div className="bg-white rounded p-2">
                     <div className="text-gray-600 text-xs">Total Found</div>
-                    <div className="font-bold text-blue-600">{entities.length}</div>
+                    <div className="font-bold" style={{color: '#0A5569'}}>{entities.length}</div>
                 </div>
                 <div className="bg-white rounded p-2">
                     <div className="text-gray-600 text-xs">Enriched</div>
