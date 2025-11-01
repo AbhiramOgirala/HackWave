@@ -9,13 +9,13 @@ A powerful tool that analyzes literature and historical texts to provide cultura
 - **Modern Analogies**: Provides contemporary parallels for better understanding
 - **Visual Context**: Generates relevant images for visualization
 - **Multi-language Support**: Works with various regional languages
-- **History Tracking**: Stores all analyses in PostgreSQL database
+- **History Tracking**: Stores all analyses in Supabase (PostgreSQL)
 
 ## Tech Stack
 
 ### Backend
 - **FastAPI**: Modern Python web framework
-- **PostgreSQL**: Robust database for storing analyses
+- **Supabase**: Cloud PostgreSQL database for storing analyses
 - **SQLAlchemy**: ORM for database operations
 - **Google Gemini API**: AI-powered cultural analysis
 - **Pillow**: Image processing
@@ -32,7 +32,7 @@ A powerful tool that analyzes literature and historical texts to provide cultura
 
 - Python 3.9+
 - Node.js 18+
-- PostgreSQL 14+
+- Supabase Account (free tier available)
 - Google Gemini API Key
 
 ## Installation
@@ -43,18 +43,12 @@ A powerful tool that analyzes literature and historical texts to provide cultura
 cd cultural-context-analyzer
 ```
 
-### 2. Database Setup
+### 2. Database Setup (Supabase)
 
-```bash
-# Start PostgreSQL (if not running)
-# Windows (if using PostgreSQL service):
-# Services -> PostgreSQL -> Start
-
-# Create database
-psql -U postgres
-CREATE DATABASE cultural_context_db;
-\q
-```
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Get your database credentials from Project Settings → Database
+4. See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for detailed instructions
 
 ### 3. Backend Setup
 
@@ -72,13 +66,19 @@ venv\Scripts\activate
 pip install -r requirements.txt
 
 # Create .env file
-# Copy .env.example to .env and add your credentials
+# Copy .env.example to .env and add your Supabase credentials
 ```
 
-Create `backend/.env` file:
+Create `backend/.env` file (see `.env.example` or `SUPABASE_SETUP.md`):
 ```env
-DATABASE_URL=postgresql://postgres:your_password@localhost:5432/cultural_context_db
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Supabase Database Connection
+SUPABASE_DB_HOST=db.xxxxxxxxxxxxx.supabase.co
+SUPABASE_DB_PORT=5432
+SUPABASE_DB_NAME=postgres
+SUPABASE_DB_USER=postgres
+SUPABASE_DB_PASSWORD=your-database-password
 ```
 
 ### 4. Frontend Setup
@@ -118,44 +118,34 @@ npm run dev
 
 Frontend will run on: `http://localhost:5173`
 
-## Database Commands
+## Database Management
 
 ### Initialize Database Tables
 
-The tables are automatically created when you first run the backend. To manually reset:
-
-```bash
-cd backend
-venv\Scripts\activate
-python -c "from database import init_db; init_db()"
-```
+The tables are automatically created when you first run the backend.
 
 ### View Database Data
 
-```bash
-psql -U postgres -d cultural_context_db
+Use the Supabase Dashboard:
+1. Go to your project on [supabase.com](https://supabase.com)
+2. Navigate to **Table Editor**
+3. View the `analyses` table
 
-# List all analyses
-SELECT * FROM analyses;
+Or use the SQL Editor:
+```sql
+-- List all analyses
+SELECT * FROM analyses ORDER BY created_at DESC;
 
-# View specific analysis
+-- View specific analysis
 SELECT * FROM analyses WHERE id = 1;
 
-# Count total analyses
+-- Count total analyses
 SELECT COUNT(*) FROM analyses;
 ```
 
-### Backup Database
+### Backup and Migration
 
-```bash
-pg_dump -U postgres cultural_context_db > backup.sql
-```
-
-### Restore Database
-
-```bash
-psql -U postgres cultural_context_db < backup.sql
-```
+Supabase provides automatic daily backups. For manual backups or migration from local PostgreSQL, see [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 
 ## API Endpoints
 
@@ -221,9 +211,10 @@ cultural-context-analyzer/
 ## Troubleshooting
 
 ### Database Connection Issues
-- Ensure PostgreSQL is running
-- Check credentials in `.env`
-- Verify database exists: `psql -U postgres -l`
+- Verify Supabase credentials in `.env`
+- Check Supabase project is active
+- Ensure database password is correct
+- See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for detailed troubleshooting
 
 ### Gemini API Errors
 - Verify API key is valid

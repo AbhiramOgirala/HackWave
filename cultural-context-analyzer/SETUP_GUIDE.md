@@ -14,9 +14,10 @@ Before starting, ensure you have the following installed:
    - Download from: https://nodejs.org/
    - LTS version recommended
 
-3. **PostgreSQL 14 or higher**
-   - Download from: https://www.postgresql.org/download/windows/
-   - Remember the password you set for the `postgres` user during installation
+3. **Supabase Account** (replaces local PostgreSQL)
+   - Create free account at: https://supabase.com
+   - No installation needed - cloud-based database
+   - See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for detailed setup
 
 4. **Google Gemini API Key**
    - Get it from: https://makersuite.google.com/app/apikey
@@ -24,25 +25,32 @@ Before starting, ensure you have the following installed:
 
 ## Step-by-Step Setup
 
-### 1. Database Setup
+### 1. Database Setup (Supabase)
 
-Open Command Prompt or PowerShell and run:
+Instead of local PostgreSQL, we now use Supabase:
 
-```powershell
-# Connect to PostgreSQL
-psql -U postgres
+1. **Create Account:**
+   - Go to https://supabase.com
+   - Sign up with GitHub, Google, or email
 
-# Enter your PostgreSQL password when prompted
+2. **Create Project:**
+   - Click "New Project"
+   - Set project name: `cultural-context-analyzer`
+   - Set a strong database password (save this!)
+   - Choose region closest to you
+   - Click "Create new project" (takes ~2 minutes)
 
-# Create the database
-CREATE DATABASE cultural_context_db;
+3. **Get Credentials:**
+   - Go to Project Settings (gear icon) → Database
+   - Under "Connection string", select "URI" tab
+   - Copy your connection string OR note individual parameters:
+     - Host: `db.xxxxxxxxxxxxx.supabase.co`
+     - Database: `postgres`
+     - Port: `5432`
+     - User: `postgres`
+     - Password: (the one you set)
 
-# Verify database was created
-\l
-
-# Exit psql
-\q
-```
+For detailed instructions, see [SUPABASE_SETUP.md](SUPABASE_SETUP.md)
 
 ### 2. Backend Configuration
 
@@ -55,13 +63,22 @@ cd backend
 Create a file named `.env` with the following content:
 
 ```env
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/cultural_context_db
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+
+# Supabase Database Connection
+SUPABASE_DB_HOST=db.xxxxxxxxxxxxx.supabase.co
+SUPABASE_DB_PORT=5432
+SUPABASE_DB_NAME=postgres
+SUPABASE_DB_USER=postgres
+SUPABASE_DB_PASSWORD=YOUR_SUPABASE_PASSWORD
 ```
 
 **Important:** Replace:
-- `YOUR_PASSWORD` with your PostgreSQL password
 - `YOUR_GEMINI_API_KEY` with your actual Gemini API key
+- `db.xxxxxxxxxxxxx.supabase.co` with your actual Supabase host
+- `YOUR_SUPABASE_PASSWORD` with your Supabase database password
+
+You can also copy `.env.example` and fill in your values.
 
 ### 3. Backend Installation
 
@@ -118,6 +135,7 @@ python main.py
 
 You should see:
 ```
+🔗 Connecting to Supabase database at db.xxxxxxxxxxxxx.supabase.co...
 ✅ Database initialized successfully
 🚀 Cultural Context Analyzer API is running
 INFO:     Uvicorn running on http://0.0.0.0:8000
@@ -158,74 +176,74 @@ Open your browser and go to: **http://localhost:5173**
    - Click "Analyze Cultural Context"
    - You should see 4 sections of analysis
 
-## Database Commands
+## Database Management
 
 ### View Stored Data
 
-```powershell
-# Connect to database
-psql -U postgres -d cultural_context_db
+**Option 1: Supabase Dashboard (Recommended)**
+1. Go to your Supabase project at https://supabase.com
+2. Click on "Table Editor" in the left sidebar
+3. Click on the `analyses` table
+4. View, filter, and sort your data visually
 
-# View all analyses
-SELECT id, language, LEFT(input_text, 50) as text_preview, created_at FROM analyses;
+**Option 2: SQL Editor**
+1. In Supabase Dashboard, click "SQL Editor"
+2. Run queries:
 
-# View specific analysis
+```sql
+-- View all analyses
+SELECT id, language, LEFT(input_text, 50) as text_preview, created_at 
+FROM analyses 
+ORDER BY created_at DESC;
+
+-- View specific analysis
 SELECT * FROM analyses WHERE id = 1;
 
-# Count total analyses
+-- Count total analyses
 SELECT COUNT(*) FROM analyses;
-
-# Exit
-\q
 ```
 
 ### Reset Database
 
-```powershell
-# Connect to database
-psql -U postgres -d cultural_context_db
+**Via Supabase Dashboard:**
+1. Go to Table Editor
+2. Click on `analyses` table
+3. Click the three dots → Delete table
+4. Restart your backend to recreate the table
 
-# Drop all data
+**Via SQL Editor:**
+```sql
 DROP TABLE analyses;
-
-# Exit
-\q
-
-# Restart backend to recreate tables
-cd backend
-.\venv\Scripts\Activate.ps1
-python main.py
 ```
 
-### Backup Database
+Then restart backend to recreate.
 
-```powershell
-# Create backup
-pg_dump -U postgres cultural_context_db > backup.sql
+### Backup and Restore
 
-# Restore from backup
-psql -U postgres cultural_context_db < backup.sql
-```
+Supabase provides automatic daily backups on all plans.
+
+**Manual Export:**
+1. Go to Database → Backups in Supabase Dashboard
+2. Click "Create Backup" for instant backup
+3. Or use SQL Editor to export specific tables
+
+For migration from local PostgreSQL, see [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 
 ## Troubleshooting
-
-### Issue: "psql: command not found"
-
-**Solution:** Add PostgreSQL to PATH
-1. Find PostgreSQL installation (usually `C:\Program Files\PostgreSQL\15\bin`)
-2. Add to System Environment Variables PATH
-3. Restart terminal
 
 ### Issue: "Cannot connect to database"
 
 **Solutions:**
-1. Check PostgreSQL service is running:
-   - Open Services (Win + R, type `services.msc`)
-   - Find "postgresql-x64-XX" service
-   - Start if not running
+1. Verify Supabase credentials in `backend/.env`
+2. Check your Supabase project is active at https://supabase.com
+3. Ensure database password is correct
+4. Verify the host format: `db.xxxxxxxxxxxxx.supabase.co`
+5. Check internet connection (Supabase is cloud-based)
+6. See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for detailed troubleshooting
 
-2. Verify connection string in `backend/.env`
-3. Check password is correct
+### Issue: "psql: command not found"
+
+**Note:** With Supabase, you don't need `psql` locally! Use the Supabase Dashboard SQL Editor instead.
 
 ### Issue: "Gemini API Error"
 

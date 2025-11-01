@@ -1,13 +1,12 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from contextlib import asynccontextmanager
 import uvicorn
 
-from database import get_db, init_db, migrate_image_url_column, Analysis
+from database import get_db, init_db, save_analysis, get_analysis, get_all_analyses
 from gemini_service import gemini_service
 
 
@@ -16,7 +15,6 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events"""
     # Startup
     init_db()
-    migrate_image_url_column()
     print("✅ Database initialized successfully")
     print("🚀 Cultural Context Analyzer API is running")
     yield
@@ -58,8 +56,7 @@ class AnalysisResponse(BaseModel):
     image_url: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 @app.get("/")
@@ -77,7 +74,7 @@ async def root():
 
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
-async def analyze_text(request: AnalyzeRequest, db: Session = Depends(get_db)):
+async def analyze_text(request: AnalyzeRequest):
     """
     Analyze text for cultural context
     
@@ -98,7 +95,7 @@ async def analyze_text(request: AnalyzeRequest, db: Session = Depends(get_db)):
         # Analyze using Gemini API
         analysis_result = await gemini_service.analyze_cultural_context(
             text=request.text,
-            language=request.language
+            language=request.language or "en"
         )
         
         # Generate enhanced image description
@@ -106,25 +103,24 @@ async def analyze_text(request: AnalyzeRequest, db: Session = Depends(get_db)):
             analysis_result["visualization_description"]
         )
         
-        # Store in database
-        db_analysis = Analysis(
-            input_text=request.text,
-            language=request.language,
-            cultural_origin=analysis_result["cultural_origin"],
-            cross_cultural_connections=analysis_result["cross_cultural_connections"],
-            modern_analogy=analysis_result["modern_analogy"],
-            visualization_description=analysis_result["visualization_description"],
-            image_url=image_prompt  # Store the enhanced prompt as image_url
-        )
+        # Prepare data for Supabase
+        analysis_data = {
+            'input_text': request.text,
+            'language': request.language,
+            'cultural_origin': analysis_result["cultural_origin"],
+            'cross_cultural_connections': analysis_result["cross_cultural_connections"],
+            'modern_analogy': analysis_result["modern_analogy"],
+            'visualization_description': analysis_result["visualization_description"],
+            'image_url': image_prompt,  # Store the enhanced prompt as image_url
+            'created_at': datetime.utcnow().isoformat()
+        }
         
-        db.add(db_analysis)
-        db.commit()
-        db.refresh(db_analysis)
+        # Save to Supabase
+        saved_analysis = save_analysis(analysis_data)
         
-        return db_analysis
+        return saved_analysis
         
     except Exception as e:
-        db.rollback()
         print(f"Error in analyze_text: {e}")
         raise HTTPException(
             status_code=500,
@@ -135,8 +131,7 @@ async def analyze_text(request: AnalyzeRequest, db: Session = Depends(get_db)):
 @app.get("/api/history", response_model=List[AnalysisResponse])
 async def get_history(
     skip: int = 0,
-    limit: int = 20,
-    db: Session = Depends(get_db)
+    limit: int = 20
 ):
     """
     Get analysis history
@@ -146,17 +141,18 @@ async def get_history(
         limit: Maximum number of records to return
     """
     
-    analyses = db.query(Analysis)\
-        .order_by(Analysis.created_at.desc())\
-        .offset(skip)\
-        .limit(limit)\
-        .all()
+    # Get all analyses from Supabase (already ordered by created_at desc)
+    analyses = get_all_analyses(limit=limit)
+    
+    # Apply skip manually if needed
+    if skip > 0:
+        analyses = analyses[skip:]
     
     return analyses
 
 
 @app.get("/api/analysis/{analysis_id}", response_model=AnalysisResponse)
-async def get_analysis(analysis_id: int, db: Session = Depends(get_db)):
+async def get_analysis_by_id(analysis_id: int):
     """
     Get specific analysis by ID
     
@@ -164,7 +160,7 @@ async def get_analysis(analysis_id: int, db: Session = Depends(get_db)):
         analysis_id: ID of the analysis to retrieve
     """
     
-    analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    analysis = get_analysis(analysis_id)
     
     if not analysis:
         raise HTTPException(
@@ -176,7 +172,7 @@ async def get_analysis(analysis_id: int, db: Session = Depends(get_db)):
 
 
 @app.delete("/api/analysis/{analysis_id}")
-async def delete_analysis(analysis_id: int, db: Session = Depends(get_db)):
+async def delete_analysis(analysis_id: int):
     """
     Delete specific analysis by ID
     
@@ -184,35 +180,45 @@ async def delete_analysis(analysis_id: int, db: Session = Depends(get_db)):
         analysis_id: ID of the analysis to delete
     """
     
-    analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    supabase = get_db()
     
+    # Check if exists
+    analysis = get_analysis(analysis_id)
     if not analysis:
         raise HTTPException(
             status_code=404,
             detail=f"Analysis with ID {analysis_id} not found"
         )
     
-    db.delete(analysis)
-    db.commit()
-    
-    return {"message": f"Analysis {analysis_id} deleted successfully"}
+    # Delete from Supabase
+    try:
+        supabase.table('analyses').delete().eq('id', analysis_id).execute()
+        return {"message": f"Analysis {analysis_id} deleted successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error deleting analysis: {str(e)}"
+        )
 
 
 @app.get("/api/stats")
-async def get_stats(db: Session = Depends(get_db)):
+async def get_stats():
     """Get statistics about analyses"""
     
-    total_analyses = db.query(Analysis).count()
+    # Get all analyses to compute stats
+    all_analyses = get_all_analyses(limit=1000)
+    
+    total_analyses = len(all_analyses)
     
     # Get language distribution
-    language_stats = db.query(
-        Analysis.language,
-        db.func.count(Analysis.id)
-    ).group_by(Analysis.language).all()
+    language_distribution = {}
+    for analysis in all_analyses:
+        lang = analysis.get('language', 'en')
+        language_distribution[lang] = language_distribution.get(lang, 0) + 1
     
     return {
         "total_analyses": total_analyses,
-        "language_distribution": {lang: count for lang, count in language_stats}
+        "language_distribution": language_distribution
     }
 
 
