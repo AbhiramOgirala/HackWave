@@ -2,10 +2,13 @@
   - type: web
     name: cultural-context-analyzer-api
     env: docker
-    dockerfilePath: ./cultural-context-analyzer/backend/Dockerfile
-    dockerContext: ./cultural-context-analyzer/backend
+    # Paths are relative to the repository root where this render.yaml sits.
+    # Use ./backend (not ./cultural-context-analyzer/backend) so Render can find the Dockerfile and context.
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free
-    healthCheckPath: /health
+    # Backend exposes the health endpoint at /api/health
+    healthCheckPath: /api/health
     envVars:
       - key: GEMINI_API_KEY
         sync: false
