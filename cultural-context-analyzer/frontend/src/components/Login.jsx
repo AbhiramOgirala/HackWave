@@ -34,13 +34,13 @@ function Login() {
 
     try {
       const response = await axiosInstance.post('/api/auth/login', formData);
-      
+
       // Store token and user in localStorage
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      // Navigate to home page
-      navigate('/');
+
+      // Navigate to analyzer page
+      navigate('/analyzer');
       window.location.reload(); // Refresh to update auth state
     } catch (err) {
       console.error('Login error:', err);
@@ -51,11 +51,11 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{backgroundColor: '#f0f9fa'}}>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{ backgroundColor: '#f0f9fa' }}>
       <div className="max-w-md w-full">
         <div className="card">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2" style={{color: '#0A5569'}}>
+            <h1 className="text-3xl font-bold mb-2" style={{ color: '#0A5569' }}>
               Welcome Back
             </h1>
             <p className="text-gray-600">
@@ -126,7 +126,7 @@ function Login() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/register" className="font-medium" style={{color: '#0A5569'}}>
+              <Link to="/register" className="font-medium" style={{ color: '#0A5569' }}>
                 Create one here
               </Link>
             </p>

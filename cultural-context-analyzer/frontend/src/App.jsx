@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './components/Login';
 import Register from './components/Register';
 import Analyzer from './components/Analyzer';
+import LandingPage from './components/LandingPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -14,25 +15,29 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route 
-          path="/login" 
-          element={<Login />} 
+        <Route
+          path="/"
+          element={<LandingPage />}
         />
-        <Route 
-          path="/register" 
-          element={<Register />} 
+        <Route
+          path="/login"
+          element={<Login />}
         />
-        <Route 
-          path="/" 
+        <Route
+          path="/register"
+          element={<Register />}
+        />
+        <Route
+          path="/analyzer"
           element={
             <ProtectedRoute>
               <Analyzer />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="*" 
-          element={<Navigate to="/" replace />} 
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
         />
       </Routes>
     </Router>

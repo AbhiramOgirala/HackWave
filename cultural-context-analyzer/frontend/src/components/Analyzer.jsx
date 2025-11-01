@@ -346,9 +346,9 @@ function Analyzer() {
   ];
 
   const exampleTexts = [
+    "After years of success, the company finally met its Waterloo when the new product failed.",
     "The Ramayana is an ancient Indian epic that tells the story of Prince Rama's quest to rescue his wife Sita from the demon king Ravana.",
-    "Haiku is a traditional form of Japanese poetry consisting of three lines with a 5-7-5 syllable pattern, often focusing on nature and seasons.",
-    "The Renaissance was a period of cultural rebirth in Europe, marked by renewed interest in classical art, literature, and learning.",
+    "పోతన రచించిన తెలుగు భాగవతం ఒక పవిత్రమైన ఆధ్యాత్మిక గ్రంథం, ఇది విష్ణువు యొక్క అవతారాల కథలను అందమైన తెలుగు కవిత్వంలో వివరిస్తుంది.",
   ];
 
   return (
@@ -528,8 +528,8 @@ function Analyzer() {
                         onClick={isRecording ? handleStopRecording : handleStartRecording}
                         disabled={loading}
                         className={`p-3 rounded-full transition-all ${isRecording
-                            ? 'bg-red-500 hover:bg-red-600 animate-pulse'
-                            : 'hover:bg-gray-100'
+                          ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                          : 'hover:bg-gray-100'
                           }`}
                         style={{
                           backgroundColor: isRecording ? '#ef4444' : '#e6f7f9',

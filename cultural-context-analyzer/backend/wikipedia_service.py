@@ -1,9 +1,11 @@
 """
-Wikipedia and Wikidata API Integration Service
+Wikipedia and Wikidata API Integration Service (Enhanced with Multi-Source)
 
 This service fetches verified background summaries for cultural, historical,
 and literary entities detected in text. Includes error handling, rate limiting,
 and fallback mechanisms.
+
+Now integrates with multi_source_service for cross-verification and accuracy.
 """
 
 import requests
@@ -11,6 +13,7 @@ import wikipediaapi
 from typing import Dict, Any, Optional, List
 import time
 from datetime import datetime
+from multi_source_service import multi_source_service
 
 
 class WikipediaService:
@@ -296,17 +299,24 @@ class WikipediaService:
     def enrich_entity(
         self, 
         entity_name: str, 
-        entity_type: str = "MISC"
+        entity_type: str = "MISC",
+        use_multi_source: bool = True
     ) -> Dict[str, Any]:
         """
-        Comprehensive entity enrichment from both Wikipedia and Wikidata
+        Comprehensive entity enrichment - now with multi-source verification!
+        
+        Strategy:
+        1. If use_multi_source=True (default): Query multiple authoritative sources
+        2. Fallback to Wikipedia if multi-source fails
+        3. Cross-verify information when available from multiple sources
         
         Args:
             entity_name: Name of the entity
             entity_type: Type of entity
+            use_multi_source: Whether to use multi-source lookup (default: True)
         
         Returns:
-            Combined enriched data dictionary
+            Combined enriched data dictionary with confidence scores
         """
         enriched_data = {
             "entity_name": entity_name,
@@ -315,16 +325,52 @@ class WikipediaService:
             "url": None,
             "wikidata": None,
             "cultural_significance": "unknown",
-            "source": None
+            "source": None,
+            "confidence": "low",
+            "sources_consulted": []
         }
         
-        # Try Wikipedia first (more detailed)
+        # Try multi-source lookup first (more accurate and up-to-date)
+        if use_multi_source:
+            try:
+                multi_data = multi_source_service.get_comprehensive_info(entity_name, entity_type)
+                
+                if multi_data and multi_data.get("sources_consulted"):
+                    # Multi-source found data - prioritize this
+                    enriched_data.update({
+                        "summary": multi_data.get("summary") or multi_data.get("description"),
+                        "description": multi_data.get("description"),
+                        "url": multi_data.get("url"),
+                        "image_url": multi_data.get("image_url"),
+                        "confidence": multi_data.get("confidence"),
+                        "sources_consulted": multi_data.get("sources_consulted", []),
+                        "source": f"Multi-Source ({len(multi_data.get('sources_consulted', []))} sources)",
+                        "wikidata_id": multi_data.get("wikidata_id"),
+                        "dbpedia_uri": multi_data.get("dbpedia_uri"),
+                        "literary_info": multi_data.get("literary_info")
+                    })
+                    
+                    # Classify cultural significance from available data
+                    enriched_data["cultural_significance"] = self._classify_from_multi_source(
+                        entity_type, 
+                        multi_data
+                    )
+                    
+                    print(f"✅ Multi-source enrichment successful for '{entity_name}'")
+                    return enriched_data
+                    
+            except Exception as e:
+                print(f"⚠️  Multi-source lookup failed, falling back to Wikipedia: {e}")
+        
+        # Fallback to Wikipedia-only approach
         wiki_data = self.get_entity_summary(entity_name, entity_type)
         
         if wiki_data:
             enriched_data.update(wiki_data)
+            enriched_data["sources_consulted"].append("Wikipedia")
+            enriched_data["confidence"] = "medium (Wikipedia only)"
         else:
-            # Fallback to Wikidata for basic info
+            # Last resort: try Wikidata only
             wikidata_info = self.get_wikidata_info(entity_name)
             
             if wikidata_info:
@@ -332,8 +378,66 @@ class WikipediaService:
                 enriched_data["url"] = wikidata_info["url"]
                 enriched_data["wikidata"] = wikidata_info
                 enriched_data["source"] = "Wikidata"
+                enriched_data["sources_consulted"].append("Wikidata")
+                enriched_data["confidence"] = "low (Wikidata only)"
         
         return enriched_data
+    
+    def _classify_from_multi_source(
+        self, 
+        entity_type: str, 
+        multi_data: Dict[str, Any]
+    ) -> str:
+        """
+        Classify cultural significance using multi-source data
+        
+        Args:
+            entity_type: spaCy entity type
+            multi_data: Data from multi_source_service
+        
+        Returns:
+            Cultural significance classification
+        """
+        # Check literary info first
+        if multi_data.get("literary_info"):
+            return "literary"
+        
+        # Check Knowledge Graph types
+        kg_types = multi_data.get("types", [])
+        if isinstance(kg_types, list):
+            types_str = ' '.join(kg_types).lower()
+            
+            if 'book' in types_str or 'creativework' in types_str:
+                return "literary"
+            if 'person' in types_str:
+                return "biographical"
+            if 'place' in types_str:
+                return "geographical"
+            if 'event' in types_str:
+                return "historical"
+        
+        # Check description for keywords
+        description = (multi_data.get("description", "") + " " + 
+                      multi_data.get("summary", "")).lower()
+        
+        if any(word in description for word in ['mythology', 'mythological', 'folklore', 'legend']):
+            return "mythological"
+        if any(word in description for word in ['ancient', 'classical', 'medieval', 'historical']):
+            return "historical"
+        if any(word in description for word in ['philosophy', 'philosophical', 'philosopher']):
+            return "philosophical"
+        if any(word in description for word in ['religion', 'religious', 'spiritual', 'sacred']):
+            return "religious"
+        
+        # Fallback to entity type
+        if entity_type == "WORK_OF_ART":
+            return "artistic"
+        if entity_type in ["PERSON", "ORG"]:
+            return "biographical"
+        if entity_type in ["GPE", "LOC"]:
+            return "geographical"
+        
+        return "general"
 
 
 # Singleton instance

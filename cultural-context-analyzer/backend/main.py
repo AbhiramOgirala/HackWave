@@ -193,6 +193,21 @@ async def root():
     }
 
 
+@app.get("/api/health")
+async def health_check():
+    """
+    Health check endpoint to prevent cold starts on Render
+    
+    This lightweight endpoint can be called by the frontend on page load
+    to keep the backend warm and reduce response times for actual requests.
+    """
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "Cultural Context Analyzer API"
+    }
+
+
 @app.post("/api/auth/register", response_model=TokenResponse)
 async def register(request: RegisterRequest):
     """

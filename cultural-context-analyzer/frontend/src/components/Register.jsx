@@ -48,13 +48,13 @@ function Register() {
 
     try {
       const response = await axiosInstance.post('/api/auth/register', formData);
-      
+
       // Store token and user in localStorage
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      // Navigate to home page
-      navigate('/');
+
+      // Navigate to analyzer page
+      navigate('/analyzer');
       window.location.reload(); // Refresh to update auth state
     } catch (err) {
       console.error('Registration error:', err);
@@ -65,11 +65,11 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{backgroundColor: '#f0f9fa'}}>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{ backgroundColor: '#f0f9fa' }}>
       <div className="max-w-md w-full">
         <div className="card">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2" style={{color: '#0A5569'}}>
+            <h1 className="text-3xl font-bold mb-2" style={{ color: '#0A5569' }}>
               Create Account
             </h1>
             <p className="text-gray-600">
@@ -175,7 +175,7 @@ function Register() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium" style={{color: '#0A5569'}}>
+              <Link to="/login" className="font-medium" style={{ color: '#0A5569' }}>
                 Sign in here
               </Link>
             </p>
