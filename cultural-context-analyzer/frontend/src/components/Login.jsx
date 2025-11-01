@@ -51,7 +51,7 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-teal-50">
+    <div className="min-h-screen">
       {/* Navigation Bar */}
       <Navigation />
 

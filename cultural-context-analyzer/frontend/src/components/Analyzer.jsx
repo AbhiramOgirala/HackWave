@@ -353,7 +353,7 @@ function Analyzer() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-teal-50">
+    <div className="min-h-screen">
       {/* Navigation Bar */}
       <Navigation user={user} onLogout={handleLogout} />
 
@@ -991,15 +991,21 @@ function Analyzer() {
 
             {/* Sidebar - History */}
             <div className="lg:col-span-1">
-              <div className="card sticky top-8 animate-fade-in">
+              <div className="sticky top-8 animate-fade-in rounded-xl shadow-lg p-6 border" style={{
+                background: 'linear-gradient(135deg, #e6f7f9 0%, #f0f9fa 50%, #ffffff 100%)',
+                borderColor: '#b3dfe6'
+              }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <History className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: '#0A5569' }}>
+                    <History className="w-5 h-5" style={{ color: '#0A5569' }} />
                     Recent Analyses
                   </h2>
                   <button
                     onClick={() => setShowHistory(!showHistory)}
-                    className="text-sm text-blue-600 hover:text-blue-700"
+                    className="text-sm font-medium transition-colors"
+                    style={{ color: '#0A5569' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#0d6b82'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#0A5569'}
                   >
                     {showHistory ? 'Hide' : 'Show'}
                   </button>
@@ -1008,7 +1014,7 @@ function Analyzer() {
                 {showHistory && (
                   <div className="space-y-2 max-h-[600px] overflow-y-auto">
                     {history.length === 0 ? (
-                      <p className="text-gray-500 text-sm text-center py-8">
+                      <p className="text-sm text-center py-8" style={{ color: '#0A5569' }}>
                         No analyses yet. Start by analyzing some text!
                       </p>
                     ) : (
@@ -1016,7 +1022,19 @@ function Analyzer() {
                         <div
                           key={item.id}
                           onClick={() => handleHistoryClick(item)}
-                          className="bg-gray-50 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors group"
+                          className="p-3 rounded-lg cursor-pointer transition-all group border"
+                          style={{
+                            backgroundColor: '#f0f9fa',
+                            borderColor: '#b3dfe6'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#e6f7f9';
+                            e.currentTarget.style.borderColor = '#0A5569';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f0f9fa';
+                            e.currentTarget.style.borderColor = '#b3dfe6';
+                          }}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
