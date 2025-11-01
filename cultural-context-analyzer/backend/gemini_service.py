@@ -16,6 +16,7 @@ class GeminiService:
     def __init__(self):
         self.model = genai.GenerativeModel('gemini-2.5-flash')
         self.vision_model = genai.GenerativeModel('gemini-2.5-flash')
+
     
     async def analyze_cultural_context(self, text: str, language: str = "en") -> dict:
         """

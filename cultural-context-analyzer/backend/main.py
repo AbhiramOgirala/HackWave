@@ -6,7 +6,10 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 import uvicorn
 
-from database import get_db, init_db, save_analysis, get_analysis, get_all_analyses
+from database import (
+    get_db, init_db, save_analysis, get_analysis, get_all_analyses,
+    get_cached_analysis, save_analysis_cache, get_cache_statistics
+)
 from gemini_service import gemini_service
 from nlp_service import nlp_service
 
@@ -83,12 +86,17 @@ async def analyze_text(request: AnalyzeRequest):
     """
     Analyze text for cultural context with NLP entity enrichment
     
+    This endpoint uses Supabase persistent caching to reduce API calls:
+    - Check Supabase cache (30-day TTL)
+    - On cache miss, call Gemini API and save to cache
+    - NLP entity detection runs every time for accuracy
+    
     This endpoint:
     1. Identifies the cultural origin
     2. Finds cross-cultural connections
     3. Provides modern analogies
     4. Generates visualization descriptions
-    5. Detects and enriches cultural entities (NEW)
+    5. Detects and enriches cultural entities
     """
     
     if not request.text or len(request.text.strip()) < 10:
@@ -98,13 +106,27 @@ async def analyze_text(request: AnalyzeRequest):
         )
     
     try:
-        # Analyze using Gemini API
-        analysis_result = await gemini_service.analyze_cultural_context(
-            text=request.text,
-            language=request.language or "en"
-        )
+        # Check Supabase persistent cache first
+        print(f"🔍 Checking Supabase cache...")
+        cached_result = get_cached_analysis(request.text, request.language or "en")
         
-        # NEW: Extract and enrich cultural entities with NLP
+        if cached_result:
+            print(f"🎯 Cache HIT! Skipping Gemini API call...")
+            analysis_result = cached_result
+        else:
+            print(f"❌ Cache MISS. Calling Gemini API...")
+            
+            # Call Gemini API
+            analysis_result = await gemini_service.analyze_cultural_context(
+                text=request.text,
+                language=request.language or "en"
+            )
+            
+            # Save to Supabase cache for future requests
+            print(f"💾 Saving to Supabase cache...")
+            save_analysis_cache(request.text, request.language or "en", analysis_result)
+        
+        # Extract and enrich cultural entities with NLP (always runs for accuracy)
         print("🔍 Extracting cultural entities with NLP...")
         entity_analysis = nlp_service.analyze_text_with_entities(
             text=request.text,
@@ -123,7 +145,7 @@ async def analyze_text(request: AnalyzeRequest):
             'geographic_locations': analysis_result.get("geographic_locations", []),
             'key_concepts': analysis_result.get("key_concepts", []),
             'external_resources': analysis_result.get("external_resources", {}),
-            'detected_entities': entity_analysis.get("detected_entities", []),  # NEW
+            'detected_entities': entity_analysis.get("detected_entities", []),
             'created_at': datetime.utcnow().isoformat()
         }
         
@@ -309,6 +331,69 @@ async def get_entity_highlights(text: str):
         raise HTTPException(
             status_code=500,
             detail=f"Error getting highlights: {str(e)}"
+        )
+
+
+@app.get("/api/cache/stats")
+async def get_cache_stats():
+    """
+    Get Supabase cache statistics
+    
+    Returns statistics for persistent Supabase cache:
+    - Total cached entries
+    - Cache hit counts
+    - Hit rate percentage
+    - Language distribution
+    """
+    
+    try:
+        # Get Supabase cache stats
+        cache_stats = get_cache_statistics()
+        
+        return {
+            "cache": cache_stats,
+            "cache_info": {
+                "type": "Supabase persistent cache",
+                "ttl": "30 days",
+                "scope": "Shared across all instances (cloud-ready)",
+                "storage": "PostgreSQL JSONB columns"
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error fetching cache stats: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching cache statistics: {str(e)}"
+        )
+
+
+@app.post("/api/cache/clear")
+async def clear_cache():
+    """
+    Clear expired Supabase cache entries
+    
+    Removes entries older than 30 days (or all if forced)
+    
+    Returns:
+        Confirmation message with count of deleted entries
+    """
+    
+    try:
+        from database import cleanup_expired_cache
+        deleted_count = cleanup_expired_cache(days_old=30)
+        
+        return {
+            "message": "Cache cleared successfully",
+            "entries_deleted": deleted_count,
+            "cache_type": "supabase"
+        }
+        
+    except Exception as e:
+        print(f"Error clearing cache: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error clearing cache: {str(e)}"
         )
 
 
