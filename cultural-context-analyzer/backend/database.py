@@ -66,9 +66,11 @@ def init_db():
     print("ℹ️  Run the SQL script from supabase_setup.sql if you haven't already")
 
 
-def save_analysis(analysis_data: Dict[str, Any]) -> Dict[str, Any]:
+def save_analysis(analysis_data: Dict[str, Any], user_id: Optional[int] = None) -> Dict[str, Any]:
     """Save analysis to Supabase"""
     try:
+        if user_id:
+            analysis_data['user_id'] = user_id
         response = supabase.table('analyses').insert(analysis_data).execute()
         return response.data[0] if response.data else None
     except Exception as e:
@@ -76,20 +78,26 @@ def save_analysis(analysis_data: Dict[str, Any]) -> Dict[str, Any]:
         raise
 
 
-def get_analysis(analysis_id: int) -> Optional[Dict[str, Any]]:
-    """Get analysis by ID from Supabase"""
+def get_analysis(analysis_id: int, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Get analysis by ID from Supabase, optionally filtered by user_id"""
     try:
-        response = supabase.table('analyses').select('*').eq('id', analysis_id).execute()
+        query = supabase.table('analyses').select('*').eq('id', analysis_id)
+        if user_id:
+            query = query.eq('user_id', user_id)
+        response = query.execute()
         return response.data[0] if response.data else None
     except Exception as e:
         print(f"❌ Error fetching analysis: {e}")
         raise
 
 
-def get_all_analyses(limit: int = 100) -> List[Dict[str, Any]]:
-    """Get all analyses from Supabase"""
+def get_all_analyses(limit: int = 100, user_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Get all analyses from Supabase, optionally filtered by user_id"""
     try:
-        response = supabase.table('analyses').select('*').order('created_at', desc=True).limit(limit).execute()
+        query = supabase.table('analyses').select('*')
+        if user_id:
+            query = query.eq('user_id', user_id)
+        response = query.order('created_at', desc=True).limit(limit).execute()
         return response.data if response.data else []
     except Exception as e:
         print(f"❌ Error fetching analyses: {e}")
@@ -357,3 +365,58 @@ def cleanup_expired_cache(days_old: int = 30) -> int:
         print(f"⚠️ Error cleaning up cache: {e}")
         return 0
 
+
+# User Authentication Functions
+
+def create_user(user_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Create a new user in the database
+    
+    Args:
+        user_data: Dictionary containing name, email, phone, password_hash
+    
+    Returns:
+        Created user record or None on error
+    """
+    try:
+        response = supabase.table('users').insert(user_data).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        print(f"❌ Error creating user: {e}")
+        raise
+
+
+def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """
+    Get user by email from Supabase
+    
+    Args:
+        email: User's email address
+    
+    Returns:
+        User record or None if not found
+    """
+    try:
+        response = supabase.table('users').select('*').eq('email', email).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        print(f"❌ Error fetching user: {e}")
+        return None
+
+
+def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Get user by ID from Supabase
+    
+    Args:
+        user_id: User's ID
+    
+    Returns:
+        User record or None if not found
+    """
+    try:
+        response = supabase.table('users').select('*').eq('id', user_id).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        print(f"❌ Error fetching user: {e}")
+        return None

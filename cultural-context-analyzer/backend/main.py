@@ -1,17 +1,28 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, status, Header
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 import uvicorn
+import bcrypt
+from jose import JWTError, jwt
 
 from database import (
     get_db, init_db, save_analysis, get_analysis, get_all_analyses,
-    get_cached_analysis, save_analysis_cache, get_cache_statistics
+    get_cached_analysis, save_analysis_cache, get_cache_statistics,
+    create_user, get_user_by_email, get_user_by_id
 )
 from gemini_service import gemini_service
 from nlp_service import nlp_service
+
+# JWT Configuration
+SECRET_KEY = "your-secret-key-change-in-production-use-env-variable"  # Change this in production!
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+security = HTTPBearer(auto_error=False)
 
 
 @asynccontextmanager
@@ -49,6 +60,24 @@ class AnalyzeRequest(BaseModel):
     language: Optional[str] = "en"
 
 
+class RegisterRequest(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: Dict[str, Any]
+
+
 class AnalysisResponse(BaseModel):
     id: int
     input_text: str
@@ -67,6 +96,87 @@ class AnalysisResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """Create JWT access token"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Verify JWT token and return user"""
+    try:
+        # Handle case where security dependency doesn't extract credentials
+        if credentials is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        token = credentials.credentials
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing authentication token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        print(f"🔐 Verifying token: {token[:20]}...")  # Debug log
+        
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id_str = payload.get("sub")
+        
+        if user_id_str is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: missing user ID",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Convert string back to int for database lookup
+        try:
+            user_id = int(user_id_str)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: invalid user ID format",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        user = get_user_by_id(user_id)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        print(f"✅ Token verified for user {user_id}")
+        return user
+    except JWTError as e:
+        print(f"❌ JWT Error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials: Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Token verification error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -74,6 +184,8 @@ async def root():
         "message": "Cultural Context Analyzer API",
         "version": "1.0.0",
         "endpoints": {
+            "register": "/api/auth/register",
+            "login": "/api/auth/login",
             "analyze": "/api/analyze",
             "history": "/api/history",
             "analysis": "/api/analysis/{id}"
@@ -81,8 +193,130 @@ async def root():
     }
 
 
+@app.post("/api/auth/register", response_model=TokenResponse)
+async def register(request: RegisterRequest):
+    """
+    Register a new user
+    
+    Args:
+        request: Registration data (name, email, phone, password)
+    
+    Returns:
+        JWT token and user data
+    """
+    # Check if user already exists
+    existing_user = get_user_by_email(request.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Validate password length
+    if len(request.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long"
+        )
+    
+    # Validate phone number (basic check)
+    if not request.phone or len(request.phone.strip()) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Phone number must be at least 10 characters"
+        )
+    
+    try:
+        # Hash password
+        password_hash = bcrypt.hashpw(request.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Create user
+        user_data = {
+            'name': request.name,
+            'email': request.email.lower(),
+            'phone': request.phone,
+            'password_hash': password_hash,
+            'created_at': datetime.utcnow().isoformat()
+        }
+        
+        user = create_user(user_data)
+        
+        # Create access token (sub must be a string for JWT)
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(user['id'])}, expires_delta=access_token_expires
+        )
+        
+        # Remove password hash from response
+        user_response = {k: v for k, v in user.items() if k != 'password_hash'}
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": user_response
+        }
+    except Exception as e:
+        print(f"Error in register: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error registering user: {str(e)}"
+        )
+
+
+@app.post("/api/auth/login", response_model=TokenResponse)
+async def login(request: LoginRequest):
+    """
+    Login user
+    
+    Args:
+        request: Login credentials (email, password)
+    
+    Returns:
+        JWT token and user data
+    """
+    # Get user by email
+    user = get_user_by_email(request.email.lower())
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password"
+        )
+    
+    # Verify password
+    if not bcrypt.checkpw(request.password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password"
+        )
+    
+    # Create access token (sub must be a string for JWT)
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user['id'])}, expires_delta=access_token_expires
+    )
+    
+    # Remove password hash from response
+    user_response = {k: v for k, v in user.items() if k != 'password_hash'}
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user_response
+    }
+
+
+@app.get("/api/auth/me")
+async def get_current_user(current_user: dict = Depends(verify_token)):
+    """Get current authenticated user"""
+    user_response = {k: v for k, v in current_user.items() if k != 'password_hash'}
+    return user_response
+
+
 @app.post("/api/analyze", response_model=AnalysisResponse)
-async def analyze_text(request: AnalyzeRequest):
+async def analyze_text(
+    request: AnalyzeRequest,
+    current_user: dict = Depends(verify_token)
+):
     """
     Analyze text for cultural context with NLP entity enrichment
     
@@ -149,8 +383,8 @@ async def analyze_text(request: AnalyzeRequest):
             'created_at': datetime.utcnow().isoformat()
         }
         
-        # Save to Supabase
-        saved_analysis = save_analysis(analysis_data)
+        # Save to Supabase with user_id
+        saved_analysis = save_analysis(analysis_data, user_id=current_user['id'])
         
         print(f"✅ Analysis completed with {entity_analysis.get('enriched_count', 0)} enriched entities")
         
@@ -167,18 +401,23 @@ async def analyze_text(request: AnalyzeRequest):
 @app.get("/api/history", response_model=List[AnalysisResponse])
 async def get_history(
     skip: int = 0,
-    limit: int = 20
+    limit: int = 20,
+    current_user: dict = Depends(verify_token)
 ):
     """
-    Get analysis history
+    Get analysis history for the current user
     
     Args:
         skip: Number of records to skip (pagination)
         limit: Maximum number of records to return
+        current_user: Authenticated user (from token)
+    
+    Returns:
+        List of analyses belonging to the current user
     """
     
-    # Get all analyses from Supabase (already ordered by created_at desc)
-    analyses = get_all_analyses(limit=limit)
+    # Get user's analyses from Supabase (already ordered by created_at desc)
+    analyses = get_all_analyses(limit=limit, user_id=current_user['id'])
     
     # Apply skip manually if needed
     if skip > 0:
@@ -188,15 +427,19 @@ async def get_history(
 
 
 @app.get("/api/analysis/{analysis_id}", response_model=AnalysisResponse)
-async def get_analysis_by_id(analysis_id: int):
+async def get_analysis_by_id(
+    analysis_id: int,
+    current_user: dict = Depends(verify_token)
+):
     """
-    Get specific analysis by ID
+    Get specific analysis by ID (only if owned by current user)
     
     Args:
         analysis_id: ID of the analysis to retrieve
+        current_user: Authenticated user (from token)
     """
     
-    analysis = get_analysis(analysis_id)
+    analysis = get_analysis(analysis_id, user_id=current_user['id'])
     
     if not analysis:
         raise HTTPException(
@@ -208,27 +451,31 @@ async def get_analysis_by_id(analysis_id: int):
 
 
 @app.delete("/api/analysis/{analysis_id}")
-async def delete_analysis(analysis_id: int):
+async def delete_analysis(
+    analysis_id: int,
+    current_user: dict = Depends(verify_token)
+):
     """
-    Delete specific analysis by ID
+    Delete specific analysis by ID (only if owned by current user)
     
     Args:
         analysis_id: ID of the analysis to delete
+        current_user: Authenticated user (from token)
     """
     
     supabase = get_db()
     
-    # Check if exists
-    analysis = get_analysis(analysis_id)
+    # Check if exists and belongs to user
+    analysis = get_analysis(analysis_id, user_id=current_user['id'])
     if not analysis:
         raise HTTPException(
             status_code=404,
             detail=f"Analysis with ID {analysis_id} not found"
         )
     
-    # Delete from Supabase
+    # Delete from Supabase (already verified ownership)
     try:
-        supabase.table('analyses').delete().eq('id', analysis_id).execute()
+        supabase.table('analyses').delete().eq('id', analysis_id).eq('user_id', current_user['id']).execute()
         return {"message": f"Analysis {analysis_id} deleted successfully"}
     except Exception as e:
         raise HTTPException(
