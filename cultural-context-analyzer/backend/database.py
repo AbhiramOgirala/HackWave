@@ -35,6 +35,10 @@ class Analysis:
         self.modern_analogy = kwargs.get('modern_analogy')
         self.visualization_description = kwargs.get('visualization_description')
         self.image_url = kwargs.get('image_url')
+        self.timeline_events = kwargs.get('timeline_events', [])
+        self.geographic_locations = kwargs.get('geographic_locations', [])
+        self.key_concepts = kwargs.get('key_concepts', [])
+        self.external_resources = kwargs.get('external_resources', {})
         self.created_at = kwargs.get('created_at', datetime.utcnow().isoformat())
     
     def to_dict(self) -> Dict[str, Any]:
@@ -47,6 +51,10 @@ class Analysis:
             'modern_analogy': self.modern_analogy,
             'visualization_description': self.visualization_description,
             'image_url': self.image_url,
+            'timeline_events': self.timeline_events,
+            'geographic_locations': self.geographic_locations,
+            'key_concepts': self.key_concepts,
+            'external_resources': self.external_resources,
             'created_at': self.created_at
         }
 

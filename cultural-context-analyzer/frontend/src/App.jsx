@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
-  BookOpen, 
-  Globe, 
-  Lightbulb, 
-  Image as ImageIcon, 
-  History, 
+import {
+  BookOpen,
+  Globe,
+  Lightbulb,
+  Image as ImageIcon,
+  History,
   Loader2,
   Send,
   Trash2,
   Clock,
-  Languages
+  Languages,
+  MapPin,
+  Calendar,
+  BookMarked,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  X
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -23,6 +31,9 @@ function App() {
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState(null);
+  const [expandedConcept, setExpandedConcept] = useState(null);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   // Fetch history on mount
   useEffect(() => {
@@ -40,7 +51,7 @@ function App() {
 
   const handleAnalyze = async (e) => {
     e.preventDefault();
-    
+
     if (!text.trim() || text.trim().length < 10) {
       setError('Please enter at least 10 characters of text to analyze.');
       return;
@@ -58,7 +69,7 @@ function App() {
 
       setResult(response.data);
       fetchHistory(); // Refresh history
-      
+
     } catch (err) {
       console.error('Error analyzing text:', err);
       setError(err.response?.data?.detail || 'Failed to analyze text. Please check your API connection and try again.');
@@ -120,7 +131,7 @@ function App() {
             </h1>
           </div>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Discover the rich cultural heritage behind literature and historical texts. 
+            Discover the rich cultural heritage behind literature and historical texts.
             Get insights on cultural origins, cross-cultural connections, modern analogies, and visual context.
           </p>
         </header>
@@ -134,7 +145,7 @@ function App() {
                 <Send className="w-6 h-6 text-blue-600" />
                 Enter Text to Analyze
               </h2>
-              
+
               <form onSubmit={handleAnalyze} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -293,6 +304,309 @@ function App() {
                     </div>
                   </div>
                 </div>
+
+                {/* Interactive Timeline */}
+                {result.timeline_events && result.timeline_events.length > 0 && (
+                  <div className="section-card">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-indigo-100 p-3 rounded-lg">
+                        <Calendar className="w-6 h-6 text-indigo-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-xl font-bold text-gray-800">
+                            📅 Historical Timeline
+                          </h3>
+                          <button
+                            onClick={() => setShowTimeline(!showTimeline)}
+                            className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                          >
+                            {showTimeline ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            {showTimeline ? 'Collapse' : 'Expand'}
+                          </button>
+                        </div>
+
+                        {showTimeline && (
+                          <div className="relative pl-6 border-l-2 border-indigo-300 space-y-4">
+                            {result.timeline_events.map((event, idx) => (
+                              <div key={idx} className="relative">
+                                <div className="absolute -left-[25px] w-4 h-4 rounded-full bg-indigo-600 border-4 border-white"></div>
+                                <div className="bg-indigo-50 p-4 rounded-lg">
+                                  <div className="flex items-start justify-between gap-2 mb-2">
+                                    <span className="font-bold text-indigo-900">{event.year}</span>
+                                    <span className="text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full">
+                                      Event {idx + 1}
+                                    </span>
+                                  </div>
+                                  <h4 className="font-semibold text-gray-800 mb-1">{event.title}</h4>
+                                  <p className="text-sm text-gray-700 mb-2">{event.description}</p>
+                                  <div className="text-xs text-indigo-700 bg-white p-2 rounded border border-indigo-200">
+                                    <strong>Significance:</strong> {event.significance}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactive Map Locations */}
+                {result.geographic_locations && result.geographic_locations.length > 0 && (
+                  <div className="section-card">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-teal-100 p-3 rounded-lg">
+                        <MapPin className="w-6 h-6 text-teal-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-xl font-bold text-gray-800">
+                            🗺️ Geographic Context
+                          </h3>
+                          <button
+                            onClick={() => setShowMap(!showMap)}
+                            className="text-sm text-teal-600 hover:text-teal-700 flex items-center gap-1"
+                          >
+                            {showMap ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            {showMap ? 'Collapse' : 'Expand'}
+                          </button>
+                        </div>
+
+                        {showMap && (
+                          <div className="space-y-3">
+                            {result.geographic_locations.map((location, idx) => (
+                              <div key={idx} className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <h4 className="font-bold text-teal-900">{location.name}</h4>
+                                  <MapPin className="w-4 h-4 text-teal-600" />
+                                </div>
+                                {location.modern_name && location.modern_name !== location.name && (
+                                  <p className="text-xs text-teal-700 mb-2">
+                                    Modern name: <span className="font-semibold">{location.modern_name}</span>
+                                  </p>
+                                )}
+                                <p className="text-sm text-gray-700 mb-2">{location.significance}</p>
+                                {location.coordinates && (
+                                  <div className="flex gap-2 mt-2">
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${location.coordinates.lat},${location.coordinates.lng}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs bg-teal-600 text-white px-3 py-1 rounded-full hover:bg-teal-700 flex items-center gap-1"
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                      View on Google Maps
+                                    </a>
+                                    <span className="text-xs text-gray-500">
+                                      {location.coordinates.lat.toFixed(4)}, {location.coordinates.lng.toFixed(4)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Concepts (Pop-out Explainers) */}
+                {result.key_concepts && result.key_concepts.length > 0 && (
+                  <div className="section-card">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-pink-100 p-3 rounded-lg">
+                        <BookMarked className="w-6 h-6 text-pink-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-800 mb-3">
+                          📖 Key Concepts Explained
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Click on any concept to learn more
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {result.key_concepts.map((concept, idx) => (
+                            <div key={idx}>
+                              <button
+                                onClick={() => setExpandedConcept(expandedConcept === idx ? null : idx)}
+                                className="w-full text-left bg-pink-50 hover:bg-pink-100 p-3 rounded-lg border-2 border-pink-200 transition-all"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-pink-900">{concept.term}</span>
+                                  <Info className={`w-4 h-4 text-pink-600 transition-transform ${expandedConcept === idx ? 'rotate-180' : ''}`} />
+                                </div>
+                              </button>
+
+                              {/* Pop-out Explainer */}
+                              {expandedConcept === idx && (
+                                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 animate-fade-in">
+                                  <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                                    <div className="bg-gradient-to-r from-pink-600 to-rose-600 text-white p-6 rounded-t-xl">
+                                      <div className="flex items-start justify-between">
+                                        <div>
+                                          <h4 className="text-2xl font-bold mb-1">{concept.term}</h4>
+                                          <p className="text-pink-100 text-sm">Cultural Context Explainer</p>
+                                        </div>
+                                        <button
+                                          onClick={() => setExpandedConcept(null)}
+                                          className="text-white hover:text-pink-200"
+                                        >
+                                          <X className="w-6 h-6" />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div className="p-6 space-y-4">
+                                      <div>
+                                        <h5 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                          <BookMarked className="w-5 h-5 text-pink-600" />
+                                          Definition
+                                        </h5>
+                                        <p className="text-gray-700 leading-relaxed bg-gray-50 p-3 rounded-lg">
+                                          {concept.definition}
+                                        </p>
+                                      </div>
+
+                                      <div>
+                                        <h5 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                          <Globe className="w-5 h-5 text-blue-600" />
+                                          Cultural Context
+                                        </h5>
+                                        <p className="text-gray-700 leading-relaxed bg-blue-50 p-3 rounded-lg">
+                                          {concept.context}
+                                        </p>
+                                      </div>
+
+                                      <div>
+                                        <h5 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                          <Lightbulb className="w-5 h-5 text-green-600" />
+                                          Modern Connection
+                                        </h5>
+                                        <p className="text-gray-700 leading-relaxed bg-green-50 p-3 rounded-lg">
+                                          {concept.modern_parallel}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* External Resources */}
+                {result.external_resources && Object.keys(result.external_resources).some(key => result.external_resources[key]?.length > 0) && (
+                  <div className="section-card">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-cyan-100 p-3 rounded-lg">
+                        <ExternalLink className="w-6 h-6 text-cyan-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-800 mb-3">
+                          🔗 Learn More
+                        </h3>
+                        <div className="space-y-3">
+                          {result.external_resources.timeline_links?.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                Interactive Timelines
+                              </h4>
+                              <div className="space-y-1">
+                                {result.external_resources.timeline_links.map((link, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    {link}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {result.external_resources.map_links?.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                Interactive Maps
+                              </h4>
+                              <div className="space-y-1">
+                                {result.external_resources.map_links.map((link, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    {link}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {result.external_resources.educational_videos?.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                📺 Educational Videos
+                              </h4>
+                              <div className="space-y-1">
+                                {result.external_resources.educational_videos.map((link, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    {link}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {result.external_resources.further_reading?.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                📚 Further Reading
+                              </h4>
+                              <div className="space-y-1">
+                                {result.external_resources.further_reading.map((link, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    {link}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

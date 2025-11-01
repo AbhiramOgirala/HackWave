@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from contextlib import asynccontextmanager
 import uvicorn
@@ -54,6 +54,10 @@ class AnalysisResponse(BaseModel):
     modern_analogy: str
     visualization_description: str
     image_url: Optional[str]
+    timeline_events: Optional[List[Dict[str, Any]]] = []
+    geographic_locations: Optional[List[Dict[str, Any]]] = []
+    key_concepts: Optional[List[Dict[str, Any]]] = []
+    external_resources: Optional[Dict[str, Any]] = {}
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -112,6 +116,10 @@ async def analyze_text(request: AnalyzeRequest):
             'modern_analogy': analysis_result["modern_analogy"],
             'visualization_description': analysis_result["visualization_description"],
             'image_url': image_prompt,  # Store the enhanced prompt as image_url
+            'timeline_events': analysis_result.get("timeline_events", []),
+            'geographic_locations': analysis_result.get("geographic_locations", []),
+            'key_concepts': analysis_result.get("key_concepts", []),
+            'external_resources': analysis_result.get("external_resources", {}),
             'created_at': datetime.utcnow().isoformat()
         }
         
