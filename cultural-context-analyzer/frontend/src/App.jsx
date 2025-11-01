@@ -5,7 +5,6 @@ import {
   BookOpen,
   Globe,
   Lightbulb,
-  Image as ImageIcon,
   History,
   Loader2,
   Send,
@@ -152,7 +151,7 @@ function App() {
               <form onSubmit={handleAnalyze} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Language
+                    Analysis Language (Output)
                   </label>
                   <select
                     value={language}
@@ -165,6 +164,7 @@ function App() {
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1 text-xs text-gray-500">Choose the language for the cultural analysis response</p>
                 </div>
 
                 <div>
@@ -304,36 +304,6 @@ function App() {
                       <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
                         <ReactMarkdown>{result.modern_analogy}</ReactMarkdown>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Visualization */}
-                <div className="section-card">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-orange-100 p-3 rounded-lg">
-                      <ImageIcon className="w-6 h-6 text-orange-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">
-                        4. Visualization Description
-                      </h3>
-                      <div className="text-gray-700 leading-relaxed mb-3 prose prose-sm max-w-none">
-                        <ReactMarkdown>{result.visualization_description}</ReactMarkdown>
-                      </div>
-                      {result.image_url && (
-                        <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-4 rounded-lg border border-orange-200">
-                          <p className="text-sm font-medium text-gray-700 mb-2">
-                            Enhanced Image Generation Prompt:
-                          </p>
-                          <p className="text-sm text-gray-600 italic">
-                            {result.image_url}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Use this prompt with AI image generators like DALL-E, Midjourney, or Stable Diffusion
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -679,7 +649,6 @@ function App() {
 
         {/* Footer */}
         <footer className="mt-12 text-center text-gray-600 text-sm">
-          <p>Powered by Google Gemini AI • Built for educational purposes</p>
         </footer>
       </div>
     </div>

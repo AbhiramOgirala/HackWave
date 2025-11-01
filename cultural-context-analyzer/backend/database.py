@@ -33,7 +33,6 @@ class Analysis:
         self.cultural_origin = kwargs.get('cultural_origin')
         self.cross_cultural_connections = kwargs.get('cross_cultural_connections')
         self.modern_analogy = kwargs.get('modern_analogy')
-        self.visualization_description = kwargs.get('visualization_description')
         self.image_url = kwargs.get('image_url')
         self.timeline_events = kwargs.get('timeline_events', [])
         self.geographic_locations = kwargs.get('geographic_locations', [])
@@ -50,7 +49,6 @@ class Analysis:
             'cultural_origin': self.cultural_origin,
             'cross_cultural_connections': self.cross_cultural_connections,
             'modern_analogy': self.modern_analogy,
-            'visualization_description': self.visualization_description,
             'image_url': self.image_url,
             'timeline_events': self.timeline_events,
             'geographic_locations': self.geographic_locations,

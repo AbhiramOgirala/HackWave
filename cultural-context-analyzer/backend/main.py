@@ -53,7 +53,6 @@ class AnalysisResponse(BaseModel):
     cultural_origin: str
     cross_cultural_connections: str
     modern_analogy: str
-    visualization_description: str
     image_url: Optional[str]
     timeline_events: Optional[List[Dict[str, Any]]] = []
     geographic_locations: Optional[List[Dict[str, Any]]] = []
@@ -105,11 +104,6 @@ async def analyze_text(request: AnalyzeRequest):
             language=request.language or "en"
         )
         
-        # Generate enhanced image description
-        image_prompt = await gemini_service.generate_image_description(
-            analysis_result["visualization_description"]
-        )
-        
         # NEW: Extract and enrich cultural entities with NLP
         print("🔍 Extracting cultural entities with NLP...")
         entity_analysis = nlp_service.analyze_text_with_entities(
@@ -124,8 +118,7 @@ async def analyze_text(request: AnalyzeRequest):
             'cultural_origin': analysis_result["cultural_origin"],
             'cross_cultural_connections': analysis_result["cross_cultural_connections"],
             'modern_analogy': analysis_result["modern_analogy"],
-            'visualization_description': analysis_result["visualization_description"],
-            'image_url': image_prompt,  # Store the enhanced prompt as image_url
+            'image_url': None,  # Removed visualization feature
             'timeline_events': analysis_result.get("timeline_events", []),
             'geographic_locations': analysis_result.get("geographic_locations", []),
             'key_concepts': analysis_result.get("key_concepts", []),

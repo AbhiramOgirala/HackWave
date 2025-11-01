@@ -30,17 +30,17 @@ class GeminiService:
         """
         
         prompt = f"""
-Analyze this text as a cultural expert and provide insights in JSON format:
+Analyze this text as a cultural expert and provide insights in JSON format.
 
 Text: "{text}"
-Language: {language}
+
+IMPORTANT: Provide ALL text in your response in {language} language (cultural_origin, cross_cultural_connections, modern_analogy, descriptions, etc.)
 
 Return JSON with:
 {{
     "cultural_origin": "Brief origin and significance",
     "cross_cultural_connections": "Key influences and relationships",
     "modern_analogy": "Relevant Gen Z/Millennial comparison",
-    "visualization_description": "Detailed visual elements to represent this",
     "timeline_events": [
         {{
             "year": "YYYY",
@@ -101,7 +101,6 @@ Return valid JSON only.
                     "cultural_origin": "Unable to analyze this text. The content may have triggered safety filters or the AI couldn't process it.",
                     "cross_cultural_connections": "Please try rephrasing your text or use a different passage.",
                     "modern_analogy": "Analysis was blocked or failed.",
-                    "visualization_description": "No visualization available.",
                     "timeline_events": [],
                     "geographic_locations": [],
                     "key_concepts": [],
@@ -146,8 +145,7 @@ Return valid JSON only.
             required_fields = [
                 "cultural_origin",
                 "cross_cultural_connections", 
-                "modern_analogy",
-                "visualization_description"
+                "modern_analogy"
             ]
             
             for field in required_fields:
@@ -179,7 +177,6 @@ Return valid JSON only.
                 "cultural_origin": "Error: The AI returned invalid JSON format. This is usually temporary.",
                 "cross_cultural_connections": "Please try again. If the issue persists, try simplifying your text.",
                 "modern_analogy": "The analysis could not be completed due to formatting issues.",
-                "visualization_description": "No visualization available.",
                 "timeline_events": [],
                 "geographic_locations": [],
                 "key_concepts": [],
@@ -193,45 +190,12 @@ Return valid JSON only.
                 "cultural_origin": f"Error: {str(e)}",
                 "cross_cultural_connections": "Analysis failed. Please check your internet connection and API key.",
                 "modern_analogy": "Please try again or contact support if the issue persists.",
-                "visualization_description": "No visualization available.",
                 "timeline_events": [],
                 "geographic_locations": [],
                 "key_concepts": [],
                 "external_resources": {}
             }
     
-    async def generate_image_description(self, visualization_desc: str) -> str:
-        """
-        Generate a detailed prompt for image generation based on visualization description
-        
-        Args:
-            visualization_desc: Description of what to visualize
-        
-        Returns:
-            Enhanced prompt for image generation
-        """
-        
-        prompt = f"""
-Based on this cultural visualization description, create a detailed, specific prompt for generating an educational illustration:
-
-Description: {visualization_desc}
-
-Create a prompt that:
-- Specifies artistic style (e.g., historical illustration, modern infographic, traditional art style)
-- Includes specific visual elements, colors, and composition
-- Mentions cultural accuracy and educational value
-- Is suitable for an AI image generator
-
-Return only the image generation prompt, nothing else.
-"""
-        
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text.strip()
-        except Exception as e:
-            print(f"Error generating image description: {e}")
-            return visualization_desc
-
 
 # Create singleton instance
 gemini_service = GeminiService()
