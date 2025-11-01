@@ -30,105 +30,56 @@ class GeminiService:
         """
         
         prompt = f"""
-You are a cultural and historical expert. Analyze the following text and provide detailed insights.
+Analyze this text as a cultural expert and provide insights in JSON format:
 
-Text to analyze: "{text}"
+Text: "{text}"
 Language: {language}
 
-Please provide your analysis in the following JSON format:
-
+Return JSON with:
 {{
-    "cultural_origin": "Detailed explanation of which culture this text is primarily related to, including time period, geographical region, and cultural significance. Be specific and comprehensive.",
-    "cross_cultural_connections": "Detailed explanation of how this text, concept, or cultural element relates to or influenced other cultures. Include specific examples of cultural exchange, similarities, or adaptations in different cultures.",
-    "modern_analogy": "Provide a SOPHISTICATED and TAILORED modern-day analogy that goes beyond surface-level comparisons. Connect to contemporary student experiences like social media, technology, pop culture, current events, or everyday life. Make it relatable to Gen Z/Millennial perspectives while maintaining educational depth. Avoid generic comparisons.",
-    "visualization_description": "Describe in detail what kind of image or visual representation would best illustrate this cultural context. Be specific about elements, colors, symbols, setting, and mood that should be included in a visualization.",
+    "cultural_origin": "Brief origin and significance",
+    "cross_cultural_connections": "Key influences and relationships",
+    "modern_analogy": "Relevant Gen Z/Millennial comparison",
+    "visualization_description": "Detailed visual elements to represent this",
     "timeline_events": [
         {{
-            "year": "YYYY or BCE/CE format",
-            "title": "Brief event title (MUST be about the cultural/historical period, NOT about the author)",
-            "description": "What happened and why it matters to understanding this cultural context",
-            "significance": "Impact on the culture/historical period being discussed"
+            "year": "YYYY",
+            "title": "Event title",
+            "description": "Brief context",
+            "significance": "Impact"
         }}
     ],
     "geographic_locations": [
         {{
-            "name": "Location name",
+            "name": "Location",
             "coordinates": {{"lat": 0.0, "lng": 0.0}},
-            "significance": "Why this location matters to the cultural context",
-            "modern_name": "Current name if different"
+            "significance": "Brief importance",
+            "modern_name": "Current name"
         }}
     ],
     "key_concepts": [
         {{
-            "term": "Important term or concept",
-            "definition": "Clear, student-friendly explanation",
-            "context": "How it relates to the main topic",
-            "modern_parallel": "Contemporary equivalent or example"
+            "term": "Term",
+            "definition": "Brief definition",
+            "context": "Relevance",
+            "modern_parallel": "Modern example"
         }}
     ],
     "external_resources": {{
-        "timeline_links": ["URL to interactive timeline resources if available"],
-        "map_links": ["URL to interactive map resources if available"],
-        "further_reading": ["URL to articles or educational content"]
+        "timeline_links": [],
+        "map_links": [],
+        "further_reading": []
     }}
 }}
 
-CRITICAL INSTRUCTIONS - CONDITIONAL FIELDS:
-1. **timeline_events**: ONLY include if the text has clear historical context with specific dates/periods. 
-   - Include 3-5 events in chronological order if applicable
-   - **FOCUS ON EVENTS RELATED TO THE CULTURAL CONTEXT/HISTORICAL PERIOD DESCRIBED IN THE TEXT**
-   - DO NOT include author biography events (birth, death, publications) unless specifically relevant
-   - Include events that shaped the cultural/historical context: wars, movements, cultural shifts, inventions, etc.
-   - Example: For "Ramayana" → Include events about ancient Indian civilization, Hindu philosophy development, epic tradition
-   - Example: For "Renaissance art" → Include events like fall of Constantinople, printing press invention, Medici patronage
-   - Return EMPTY ARRAY [] if text is modern, theoretical, or has no historical timeline
-   
-2. **geographic_locations**: ONLY include if specific places/locations are relevant to understanding the text.
-   - Include 2-4 locations with ACCURATE coordinates (verify they're real places)
-   - Return EMPTY ARRAY [] if the text is abstract, philosophical, or not location-specific
-   
-3. **key_concepts**: ONLY include if there are cultural/technical terms that need explanation.
-   - Include 3-5 important concepts that students may not know
-   - Return EMPTY ARRAY [] if text uses only common terminology
-   
-4. **external_resources**: ONLY include REAL, VERIFIED URLs from reputable sources.
-   - Use actual URLs from: Khan Academy, National Geographic, BBC, Britannica, educational YouTube channels
-   - Return EMPTY OBJECT {{}} if you cannot provide verified resources
-   - DO NOT invent or guess URLs
+Rules:
+- Include timeline_events only for historical content (3-5 events)
+- Include geographic_locations only for place-specific content (2-4 locations)
+- Include key_concepts only for complex terms (3-5 terms)
+- Use only verified URLs for external_resources
+- Make modern_analogy specific to current trends
 
-5. **modern_analogy**: ALWAYS required - make it SPECIFIC and CREATIVE
-   - Think: TikTok trends, streaming culture, app ecosystems, gaming, social media
-   - Avoid generic comparisons like "like a library" or "like a book"
-
-EXAMPLES OF WHEN TO INCLUDE/EXCLUDE:
-
-✅ INCLUDE timeline_events:
-- "The Ramayana is an ancient epic..." → Events about ancient India (Vedic period, Hindu philosophy, epic tradition formation), NOT Valmiki's birth/death
-- "The Renaissance began in 14th century..." → Events like fall of Constantinople (1453), printing press invention (1440), Black Death impact
-- "Shakespeare's Hamlet explores..." → Events of Elizabethan era (Spanish Armada, theater culture, religious conflicts), NOT Shakespeare's birth/death
-
-❌ EXCLUDE timeline_events:
-- "Democracy is a form of government..." → Concept, not historical event
-- "Mindfulness meditation involves..." → Practice, not tied to specific timeline
-- Modern texts without historical context
-
-✅ INCLUDE geographic_locations:
-- "The Silk Road connected China to Rome..." → Specific places matter
-- "Shakespeare's Globe Theatre in London..." → Location is relevant
-
-❌ EXCLUDE geographic_locations:
-- "Poetry is a form of artistic expression..." → Abstract concept
-- "The scientific method involves..." → No specific location needed
-
-✅ INCLUDE key_concepts:
-- "Buddhism emphasizes Nirvana and Karma..." → Specific terms need explanation
-- "Renaissance Humanism focused on..." → Technical cultural term
-
-❌ EXCLUDE key_concepts:
-- "The cat sat on the mat..." → No complex concepts
-- "Democracy means rule by the people..." → Already explained in text
-
-Be accurate and factual. Return ONLY valid JSON, no additional text.
+Return valid JSON only.
 """
         
         try:
