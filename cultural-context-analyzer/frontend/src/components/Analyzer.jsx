@@ -199,7 +199,7 @@ function Analyzer() {
               <form onSubmit={handleAnalyze} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Analysis Language (Output)
+                    Output Language
                   </label>
                   <select
                     value={language}
@@ -212,7 +212,9 @@ function Analyzer() {
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-gray-500">Choose the language for the cultural analysis response</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    The analysis results will be displayed in <strong>{languages.find(l => l.code === language)?.name || language}</strong>
+                  </p>
                 </div>
 
                 <div>

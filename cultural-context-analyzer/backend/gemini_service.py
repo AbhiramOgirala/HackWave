@@ -30,14 +30,42 @@ class GeminiService:
             Dictionary with cultural analysis results
         """
         
+        # Map language codes to full names for better AI understanding
+        language_names = {
+            "en": "English",
+            "hi": "Hindi (हिंदी)",
+            "es": "Spanish (Español)",
+            "fr": "French (Français)",
+            "de": "German (Deutsch)",
+            "zh": "Chinese (中文)",
+            "ja": "Japanese (日本語)",
+            "ar": "Arabic (العربية)",
+            "bn": "Bengali (বাংলা)",
+            "ta": "Tamil (தமிழ்)",
+            "te": "Telugu (తెలుగు)",
+            "mr": "Marathi (मराठी)",
+        }
+        
+        language_name = language_names.get(language, "English")
+        
         prompt = f"""
-Analyze this text as a cultural expert and provide insights in JSON format.
+You are a cultural expert analyzing the following text. Provide a comprehensive cultural analysis.
 
-Text: "{text}"
+Text to analyze: "{text}"
 
-IMPORTANT: Provide ALL text in your response in {language} language (cultural_origin, cross_cultural_connections, modern_analogy, descriptions, etc.)
+CRITICAL INSTRUCTION - OUTPUT LANGUAGE:
+You MUST provide ALL response text in {language_name} ({language}) language. This includes:
+- cultural_origin field
+- cross_cultural_connections field
+- modern_analogy field
+- All descriptions, titles, and text in timeline_events
+- All text in geographic_locations
+- All definitions, context, and explanations in key_concepts
+- ALL other text fields in your response
 
-Return JSON with:
+The analysis should be comprehensive and culturally sensitive, written entirely in {language_name}.
+
+Return your response as valid JSON with the following structure:
 {{
     "cultural_origin": "Brief origin and significance",
     "cross_cultural_connections": "Key influences and relationships",
@@ -74,13 +102,15 @@ Return JSON with:
 }}
 
 Rules:
+- ALL text must be in {language_name} ({language}) language - no exceptions
 - Include timeline_events only for historical content (3-5 events)
 - Include geographic_locations only for place-specific content (2-4 locations)
 - Include key_concepts only for complex terms (3-5 terms)
 - Use only verified URLs for external_resources
 - Make modern_analogy specific to current trends
+- Ensure cultural sensitivity and accuracy in the {language_name} language
 
-Return valid JSON only.
+Return ONLY valid JSON. Do not include any text before or after the JSON object.
 """
         
         try:
