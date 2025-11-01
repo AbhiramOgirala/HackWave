@@ -41,7 +41,6 @@ function Login() {
 
       // Navigate to analyzer page
       navigate('/analyzer');
-      window.location.reload(); // Refresh to update auth state
     } catch (err) {
       console.error('Login error:', err);
       setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');

@@ -55,7 +55,6 @@ function Register() {
 
       // Navigate to analyzer page
       navigate('/analyzer');
-      window.location.reload(); // Refresh to update auth state
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
