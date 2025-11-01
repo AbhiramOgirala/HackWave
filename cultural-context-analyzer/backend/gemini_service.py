@@ -7,15 +7,15 @@ import re
 load_dotenv()
 
 # Configure Gemini API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))  # type: ignore
 
 
 class GeminiService:
     """Service for interacting with Google Gemini API"""
     
     def __init__(self):
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
-        self.vision_model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel('gemini-2.5-flash')  # type: ignore
+        self.vision_model = genai.GenerativeModel('gemini-2.5-flash')  # type: ignore
 
     
     async def analyze_cultural_context(self, text: str, language: str = "en") -> dict:
@@ -245,19 +245,45 @@ Return ONLY valid JSON. Do not include any text before or after the JSON object.
             # Open image from bytes to validate and convert to PIL Image
             image = Image.open(io.BytesIO(image_data))
             
-            # Prompt for text extraction
-            prompt = """Extract all text from this image. Return only the extracted text, preserving the original structure and formatting as much as possible. 
-If there are multiple paragraphs or sections, separate them with line breaks. 
-Do not add any explanations, comments, or analysis - just return the raw text content."""
+            # Prompt for text extraction - focus on relevant content
+            prompt = """You are a smart text extraction assistant. Analyze this image and extract ONLY the main, relevant text content.
 
-            print(f"📸 Extracting text from image using Gemini Vision API...")
+RULES FOR EXTRACTION:
+1. Extract the primary/main text content (articles, paragraphs, quotes, stories, etc.)
+2. IGNORE irrelevant elements like:
+   - Watermarks, logos, branding
+   - Page numbers, headers, footers
+   - Navigation elements, buttons, menu items
+   - Copyright notices, disclaimers
+   - Advertisement text
+   - Decorative text or background elements
+   - Author names/signatures (unless part of main content)
+   - Publication details (unless essential context)
+
+3. Focus on extracting:
+   - Main body text/paragraphs
+   - Titles and headings (when they're part of the content)
+   - Quotes or important passages
+   - Story or article text
+   - Educational or informational content
+
+4. Preserve structure:
+   - Keep paragraph breaks
+   - Maintain logical text flow
+   - Separate distinct sections with line breaks
+
+Return ONLY the relevant extracted text. Do not add explanations, comments, or metadata.
+If the image contains no meaningful text content (only decorative/irrelevant text), return: "No relevant text found in image"
+"""
+
+            print(f"📸 Extracting relevant text from image using Gemini Vision API...")
             
-            # Use vision model to extract text
+            # Use vision model to extract text with focus on relevance
             # Pass PIL Image directly - Gemini API handles it
             response = self.vision_model.generate_content(
                 [prompt, image],
-                generation_config={
-                    "temperature": 0.1,  # Low temperature for accurate text extraction
+                generation_config={  # type: ignore
+                    "temperature": 0.2,  # Slightly higher for smart filtering of relevant vs irrelevant text
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 4096,
@@ -275,11 +301,20 @@ Do not add any explanations, comments, or analysis - just return the raw text co
             
             extracted_text = response.text.strip()
             
-            if not extracted_text:
+            # Check if no relevant text was found
+            if not extracted_text or extracted_text.lower() == "no relevant text found in image":
                 return {
                     "success": False,
                     "text": "",
-                    "error": "No text could be extracted from the image. Please ensure the image contains readable text."
+                    "error": "No relevant text could be extracted from the image. The image may only contain decorative elements, watermarks, or irrelevant text."
+                }
+            
+            # Validate minimum length for meaningful content (lowered to 15 for short quotes/headlines)
+            if len(extracted_text) < 15:
+                return {
+                    "success": False,
+                    "text": extracted_text,
+                    "error": "Extracted text is too short to be meaningful. Please ensure the image contains substantial readable content."
                 }
             
             word_count = len(extracted_text.split())

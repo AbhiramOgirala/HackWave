@@ -507,10 +507,10 @@ async def analyze_image(
         
         extracted_text = ocr_result.get('text', '').strip()
         
-        if len(extracted_text) < 10:
+        if len(extracted_text) < 15:
             raise HTTPException(
                 status_code=400,
-                detail="Extracted text is too short (less than 10 characters). Please ensure the image contains readable text."
+                detail="Extracted text is too short (less than 15 characters). The image may only contain irrelevant text like watermarks or page numbers. Please upload an image with more content."
             )
         
         print(f"✅ Extracted {len(extracted_text)} characters from image")
