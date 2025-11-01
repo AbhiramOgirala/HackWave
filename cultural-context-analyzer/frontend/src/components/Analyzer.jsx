@@ -21,9 +21,13 @@ import {
   X,
   Sparkles,
   LogOut,
-  User
+  User,
+  Volume2,
+  VolumeX,
+  Pause
 } from 'lucide-react';
 import { EntityHighlight, EntityLegend, EntitySummary } from './EntityHighlight';
+import { speakText, stopSpeaking, isSpeaking, pauseSpeaking, resumeSpeaking } from '../utils/textToSpeech';
 
 function Analyzer() {
   const [text, setText] = useState('');
@@ -37,6 +41,8 @@ function Analyzer() {
   const [showTimeline, setShowTimeline] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [user, setUser] = useState(null);
+  const [speakingSection, setSpeakingSection] = useState(null);
+  const [speechPaused, setSpeechPaused] = useState(false);
 
   // Load user from localStorage
   useEffect(() => {
@@ -110,10 +116,48 @@ function Analyzer() {
   };
 
   const handleLogout = () => {
+    stopSpeaking(); // Stop any ongoing speech
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/login';
   };
+
+  const handleSpeak = (text, sectionName) => {
+    if (speakingSection === sectionName && isSpeaking()) {
+      // If already speaking this section, pause/resume
+      if (speechPaused) {
+        resumeSpeaking();
+        setSpeechPaused(false);
+      } else {
+        pauseSpeaking();
+        setSpeechPaused(true);
+      }
+    } else {
+      // Stop any current speech and start new
+      stopSpeaking();
+      setSpeakingSection(sectionName);
+      setSpeechPaused(false);
+      
+      speakText(text, language, () => {
+        // On end callback
+        setSpeakingSection(null);
+        setSpeechPaused(false);
+      });
+    }
+  };
+
+  const handleStopSpeaking = () => {
+    stopSpeaking();
+    setSpeakingSection(null);
+    setSpeechPaused(false);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+    };
+  }, []);
 
   const languages = [
     { code: 'en', name: 'English' },
@@ -279,6 +323,19 @@ function Analyzer() {
             {/* Results Section */}
             {result && (
               <div className="mt-6 space-y-4 animate-fade-in">
+                {/* Stop All Speech Button */}
+                {(speakingSection !== null) && (
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={handleStopSpeaking}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-50 text-red-700 hover:bg-red-100"
+                      title="Stop reading"
+                    >
+                      <VolumeX className="w-4 h-4" />
+                      Stop Reading
+                    </button>
+                  </div>
+                )}
                 {/* Entity Highlights Section */}
                 {result.detected_entities && result.detected_entities.length > 0 && (
                   <>
@@ -310,9 +367,31 @@ function Analyzer() {
                 <div className="section-card">
                   <div className="flex items-start gap-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">
-                        1. Cultural Origin
-                      </h3>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-bold text-gray-800">
+                          1. Cultural Origin
+                        </h3>
+                        <button
+                          onClick={() => handleSpeak(result.cultural_origin, 'cultural_origin')}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                          style={{
+                            backgroundColor: speakingSection === 'cultural_origin' ? '#0A5569' : '#e6f7f9',
+                            color: speakingSection === 'cultural_origin' ? 'white' : '#0A5569'
+                          }}
+                          title={speakingSection === 'cultural_origin' ? (speechPaused ? 'Resume' : 'Pause') : 'Read aloud'}
+                        >
+                          {speakingSection === 'cultural_origin' ? (
+                            speechPaused ? (
+                              <Volume2 className="w-4 h-4" />
+                            ) : (
+                              <Pause className="w-4 h-4" />
+                            )
+                          ) : (
+                            <Volume2 className="w-4 h-4" />
+                          )}
+                          {speakingSection === 'cultural_origin' ? (speechPaused ? 'Resume' : 'Pause') : 'Read'}
+                        </button>
+                      </div>
                       <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
                         <ReactMarkdown>{result.cultural_origin}</ReactMarkdown>
                       </div>
@@ -324,9 +403,31 @@ function Analyzer() {
                 <div className="section-card">
                   <div className="flex items-start gap-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">
-                        2. Cross-Cultural Connections
-                      </h3>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-bold text-gray-800">
+                          2. Cross-Cultural Connections
+                        </h3>
+                        <button
+                          onClick={() => handleSpeak(result.cross_cultural_connections, 'cross_cultural')}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                          style={{
+                            backgroundColor: speakingSection === 'cross_cultural' ? '#0A5569' : '#e6f7f9',
+                            color: speakingSection === 'cross_cultural' ? 'white' : '#0A5569'
+                          }}
+                          title={speakingSection === 'cross_cultural' ? (speechPaused ? 'Resume' : 'Pause') : 'Read aloud'}
+                        >
+                          {speakingSection === 'cross_cultural' ? (
+                            speechPaused ? (
+                              <Volume2 className="w-4 h-4" />
+                            ) : (
+                              <Pause className="w-4 h-4" />
+                            )
+                          ) : (
+                            <Volume2 className="w-4 h-4" />
+                          )}
+                          {speakingSection === 'cross_cultural' ? (speechPaused ? 'Resume' : 'Pause') : 'Read'}
+                        </button>
+                      </div>
                       <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
                         <ReactMarkdown>{result.cross_cultural_connections}</ReactMarkdown>
                       </div>
@@ -338,9 +439,31 @@ function Analyzer() {
                 <div className="section-card">
                   <div className="flex items-start gap-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">
-                        3. Modern Analogy
-                      </h3>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-bold text-gray-800">
+                          3. Modern Analogy
+                        </h3>
+                        <button
+                          onClick={() => handleSpeak(result.modern_analogy, 'modern_analogy')}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                          style={{
+                            backgroundColor: speakingSection === 'modern_analogy' ? '#0A5569' : '#e6f7f9',
+                            color: speakingSection === 'modern_analogy' ? 'white' : '#0A5569'
+                          }}
+                          title={speakingSection === 'modern_analogy' ? (speechPaused ? 'Resume' : 'Pause') : 'Read aloud'}
+                        >
+                          {speakingSection === 'modern_analogy' ? (
+                            speechPaused ? (
+                              <Volume2 className="w-4 h-4" />
+                            ) : (
+                              <Pause className="w-4 h-4" />
+                            )
+                          ) : (
+                            <Volume2 className="w-4 h-4" />
+                          )}
+                          {speakingSection === 'modern_analogy' ? (speechPaused ? 'Resume' : 'Pause') : 'Read'}
+                        </button>
+                      </div>
                       <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
                         <ReactMarkdown>{result.modern_analogy}</ReactMarkdown>
                       </div>
