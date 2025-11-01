@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+++import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import {
   BookOpen,
   Globe,
@@ -18,8 +19,10 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
+import { EntityHighlight, EntityLegend, EntitySummary } from './components/EntityHighlight';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -224,6 +227,36 @@ function App() {
             {/* Results Section */}
             {result && (
               <div className="mt-6 space-y-4 animate-fade-in">
+                {/* Entity Highlights Section */}
+                {result.detected_entities && result.detected_entities.length > 0 && (
+                  <>
+                    <EntitySummary entities={result.detected_entities} />
+
+                    <div className="section-card">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-gradient-to-br from-purple-100 to-pink-100 p-3 rounded-lg">
+                          <Sparkles className="w-6 h-6 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-gray-800 mb-3">
+                            ✨ Interactive Cultural Context
+                          </h3>
+                          <EntityLegend />
+                          <div className="bg-white p-4 rounded-lg border-2 border-purple-200">
+                            <EntityHighlight
+                              text={result.input_text}
+                              entities={result.detected_entities}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2 italic">
+                            💡 Hover over highlighted terms to see cultural background from Wikipedia
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 {/* Cultural Origin */}
                 <div className="section-card">
                   <div className="flex items-start gap-3">
@@ -234,9 +267,9 @@ function App() {
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
                         1. Cultural Origin
                       </h3>
-                      <p className="text-gray-700 leading-relaxed">
-                        {result.cultural_origin}
-                      </p>
+                      <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
+                        <ReactMarkdown>{result.cultural_origin}</ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -251,9 +284,9 @@ function App() {
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
                         2. Cross-Cultural Connections
                       </h3>
-                      <p className="text-gray-700 leading-relaxed">
-                        {result.cross_cultural_connections}
-                      </p>
+                      <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
+                        <ReactMarkdown>{result.cross_cultural_connections}</ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -268,9 +301,9 @@ function App() {
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
                         3. Modern Analogy
                       </h3>
-                      <p className="text-gray-700 leading-relaxed">
-                        {result.modern_analogy}
-                      </p>
+                      <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
+                        <ReactMarkdown>{result.modern_analogy}</ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -285,9 +318,9 @@ function App() {
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
                         4. Visualization Description
                       </h3>
-                      <p className="text-gray-700 leading-relaxed mb-3">
-                        {result.visualization_description}
-                      </p>
+                      <div className="text-gray-700 leading-relaxed mb-3 prose prose-sm max-w-none">
+                        <ReactMarkdown>{result.visualization_description}</ReactMarkdown>
+                      </div>
                       {result.image_url && (
                         <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-4 rounded-lg border border-orange-200">
                           <p className="text-sm font-medium text-gray-700 mb-2">

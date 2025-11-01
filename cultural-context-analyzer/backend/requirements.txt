@@ -8,3 +8,10 @@ pydantic>=2.9.0
 pydantic-settings>=2.5.0
 supabase>=2.3.0
 postgrest>=0.13.0
+
+# NLP and Cultural Context Enrichment
+spacy>=3.7.0
+wikipedia-api>=0.7.0
+transformers>=4.35.0
+torch>=2.1.0
+requests>=2.31.0

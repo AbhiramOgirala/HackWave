@@ -39,6 +39,7 @@ class Analysis:
         self.geographic_locations = kwargs.get('geographic_locations', [])
         self.key_concepts = kwargs.get('key_concepts', [])
         self.external_resources = kwargs.get('external_resources', {})
+        self.detected_entities = kwargs.get('detected_entities', [])
         self.created_at = kwargs.get('created_at', datetime.utcnow().isoformat())
     
     def to_dict(self) -> Dict[str, Any]:
@@ -55,6 +56,7 @@ class Analysis:
             'geographic_locations': self.geographic_locations,
             'key_concepts': self.key_concepts,
             'external_resources': self.external_resources,
+            'detected_entities': self.detected_entities,
             'created_at': self.created_at
         }
 
@@ -98,3 +100,79 @@ def get_all_analyses(limit: int = 100) -> List[Dict[str, Any]]:
 def get_db():
     """Dependency for database access - returns Supabase client"""
     return supabase
+
+
+# Entity Cache Functions
+
+def get_cached_entity(entity_name: str, entity_type: str) -> Optional[Dict[str, Any]]:
+    """
+    Get cached entity data from Supabase
+    
+    Args:
+        entity_name: Name of the entity
+        entity_type: Type of entity (PERSON, ORG, etc.)
+    
+    Returns:
+        Cached entity data or None if not found
+    """
+    try:
+        response = supabase.table('entity_cache').select('*').eq('entity_name', entity_name).eq('entity_type', entity_type).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        print(f"❌ Error fetching cached entity: {e}")
+        return None
+
+
+def save_entity_cache(entity_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Save entity enrichment data to cache
+    
+    Args:
+        entity_data: Dictionary with entity information
+    
+    Returns:
+        Saved entity record or None on error
+    """
+    try:
+        # Use upsert to handle duplicates gracefully
+        response = supabase.table('entity_cache').upsert(entity_data, on_conflict='entity_name,entity_type').execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        print(f"❌ Error caching entity: {e}")
+        return None
+
+
+def get_all_cached_entities(limit: int = 100) -> List[Dict[str, Any]]:
+    """
+    Get all cached entities
+    
+    Args:
+        limit: Maximum number of records
+    
+    Returns:
+        List of cached entity records
+    """
+    try:
+        response = supabase.table('entity_cache').select('*').order('created_at', desc=True).limit(limit).execute()
+        return response.data if response.data else []
+    except Exception as e:
+        print(f"❌ Error fetching cached entities: {e}")
+        return []
+
+
+def clear_old_entity_cache(days_old: int = 30):
+    """
+    Clear entity cache entries older than specified days
+    
+    Args:
+        days_old: Number of days to keep in cache
+    """
+    try:
+        from datetime import timedelta
+        cutoff_date = (datetime.utcnow() - timedelta(days=days_old)).isoformat()
+        
+        supabase.table('entity_cache').delete().lt('created_at', cutoff_date).execute()
+        print(f"✅ Cleared entity cache entries older than {days_old} days")
+    except Exception as e:
+        print(f"❌ Error clearing old cache: {e}")
+

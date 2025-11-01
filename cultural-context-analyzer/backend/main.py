@@ -8,6 +8,7 @@ import uvicorn
 
 from database import get_db, init_db, save_analysis, get_analysis, get_all_analyses
 from gemini_service import gemini_service
+from nlp_service import nlp_service
 
 
 @asynccontextmanager
@@ -58,6 +59,7 @@ class AnalysisResponse(BaseModel):
     geographic_locations: Optional[List[Dict[str, Any]]] = []
     key_concepts: Optional[List[Dict[str, Any]]] = []
     external_resources: Optional[Dict[str, Any]] = {}
+    detected_entities: Optional[List[Dict[str, Any]]] = []
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -80,13 +82,14 @@ async def root():
 @app.post("/api/analyze", response_model=AnalysisResponse)
 async def analyze_text(request: AnalyzeRequest):
     """
-    Analyze text for cultural context
+    Analyze text for cultural context with NLP entity enrichment
     
     This endpoint:
     1. Identifies the cultural origin
     2. Finds cross-cultural connections
     3. Provides modern analogies
     4. Generates visualization descriptions
+    5. Detects and enriches cultural entities (NEW)
     """
     
     if not request.text or len(request.text.strip()) < 10:
@@ -107,6 +110,13 @@ async def analyze_text(request: AnalyzeRequest):
             analysis_result["visualization_description"]
         )
         
+        # NEW: Extract and enrich cultural entities with NLP
+        print("🔍 Extracting cultural entities with NLP...")
+        entity_analysis = nlp_service.analyze_text_with_entities(
+            text=request.text,
+            enrich_all=True
+        )
+        
         # Prepare data for Supabase
         analysis_data = {
             'input_text': request.text,
@@ -120,11 +130,14 @@ async def analyze_text(request: AnalyzeRequest):
             'geographic_locations': analysis_result.get("geographic_locations", []),
             'key_concepts': analysis_result.get("key_concepts", []),
             'external_resources': analysis_result.get("external_resources", {}),
+            'detected_entities': entity_analysis.get("detected_entities", []),  # NEW
             'created_at': datetime.utcnow().isoformat()
         }
         
         # Save to Supabase
         saved_analysis = save_analysis(analysis_data)
+        
+        print(f"✅ Analysis completed with {entity_analysis.get('enriched_count', 0)} enriched entities")
         
         return saved_analysis
         
@@ -228,6 +241,82 @@ async def get_stats():
         "total_analyses": total_analyses,
         "language_distribution": language_distribution
     }
+
+
+class EntityExtractionRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/entities/extract")
+async def extract_entities(request: EntityExtractionRequest):
+    """
+    Extract and enrich cultural entities from text on-demand
+    
+    Args:
+        request: Text to extract entities from
+    
+    Returns:
+        List of detected and enriched entities
+    """
+    
+    if not request.text or len(request.text.strip()) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Text must be at least 10 characters long"
+        )
+    
+    try:
+        result = nlp_service.analyze_text_with_entities(
+            text=request.text,
+            enrich_all=True
+        )
+        
+        return {
+            "entities": result["detected_entities"],
+            "total_detected": result["total_detected"],
+            "enriched_count": result["enriched_count"]
+        }
+        
+    except Exception as e:
+        print(f"Error extracting entities: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error extracting entities: {str(e)}"
+        )
+
+
+@app.get("/api/entities/highlights")
+async def get_entity_highlights(text: str):
+    """
+    Get entity highlights optimized for frontend display
+    
+    Args:
+        text: Text to highlight (query parameter)
+    
+    Returns:
+        List of highlight regions with tooltip data
+    """
+    
+    if not text or len(text.strip()) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Text must be at least 10 characters long"
+        )
+    
+    try:
+        highlights = nlp_service.get_entity_highlights(text)
+        
+        return {
+            "highlights": highlights,
+            "count": len(highlights)
+        }
+        
+    except Exception as e:
+        print(f"Error getting highlights: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting highlights: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
