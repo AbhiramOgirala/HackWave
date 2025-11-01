@@ -24,7 +24,10 @@ import {
   User,
   Volume2,
   VolumeX,
-  Pause
+  Pause,
+  Upload,
+  Image as ImageIcon,
+  X as XIcon
 } from 'lucide-react';
 import { EntityHighlight, EntityLegend, EntitySummary } from './EntityHighlight';
 import { speakText, stopSpeaking, isSpeaking, pauseSpeaking, resumeSpeaking } from '../utils/textToSpeech';
@@ -43,6 +46,10 @@ function Analyzer() {
   const [user, setUser] = useState(null);
   const [speakingSection, setSpeakingSection] = useState(null);
   const [speechPaused, setSpeechPaused] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [extractedText, setExtractedText] = useState('');
+  const [showImageUpload, setShowImageUpload] = useState(false);
 
   // Load user from localStorage
   useEffect(() => {
@@ -152,12 +159,113 @@ function Analyzer() {
     setSpeechPaused(false);
   };
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file (JPG, PNG, etc.)');
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        setError('Image file too large. Maximum size is 20MB.');
+        return;
+      }
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+      setError(null);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setSelectedImage(null);
+    setImagePreview(null);
+    setExtractedText('');
+    setError(null);
+  };
+
+  const handleExtractText = async () => {
+    if (!selectedImage) {
+      setError('Please select an image first');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedImage);
+
+      const response = await axiosInstance.post('/api/ocr/extract', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success) {
+        setExtractedText(response.data.text);
+        setText(response.data.text);
+      } else {
+        setError(response.data.error || 'Failed to extract text from image');
+      }
+    } catch (err) {
+      console.error('Error extracting text:', err);
+      setError(err.response?.data?.detail || 'Failed to extract text from image. Please check your API connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnalyzeImage = async (e) => {
+    e.preventDefault();
+
+    if (!selectedImage) {
+      setError('Please upload an image first');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedImage);
+      formData.append('language', language);
+
+      const response = await axiosInstance.post('/api/analyze/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setResult(response.data);
+      if (response.data.input_text) {
+        setExtractedText(response.data.input_text);
+        setText(response.data.input_text);
+      }
+      fetchHistory(); // Refresh history
+
+    } catch (err) {
+      console.error('Error analyzing image:', err);
+      setError(err.response?.data?.detail || 'Failed to analyze image. Please check your API connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopSpeaking();
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
     };
-  }, []);
+  }, [imagePreview]);
 
   const languages = [
     { code: 'en', name: 'English' },
@@ -261,6 +369,97 @@ function Analyzer() {
                   </p>
                 </div>
 
+                {/* Image Upload Section */}
+                <div className="border-2 border-dashed rounded-lg p-4" style={{borderColor: '#b3dfe6'}}>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      <ImageIcon className="w-4 h-4 inline mr-1" />
+                      Upload Image (Optional)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowImageUpload(!showImageUpload)}
+                      className="text-xs px-2 py-1 rounded"
+                      style={{color: '#0A5569', backgroundColor: '#e6f7f9'}}
+                    >
+                      {showImageUpload ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  
+                  {showImageUpload && (
+                    <div className="space-y-3">
+                      {!imagePreview ? (
+                        <div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageSelect}
+                            className="hidden"
+                            id="image-upload"
+                            disabled={loading}
+                          />
+                          <label
+                            htmlFor="image-upload"
+                            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+                            style={{borderColor: '#b3dfe6', backgroundColor: '#f0f9fa'}}
+                          >
+                            <Upload className="w-8 h-8 mb-2" style={{color: '#0A5569'}} />
+                            <p className="text-sm text-gray-600">
+                              Click to upload or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              PNG, JPG, GIF up to 20MB
+                            </p>
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-full max-h-64 object-contain rounded-lg border"
+                            style={{borderColor: '#b3dfe6'}}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleRemoveImage}
+                            className="absolute top-2 right-2 p-1 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                            title="Remove image"
+                          >
+                            <XIcon className="w-4 h-4" />
+                          </button>
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleExtractText}
+                              disabled={loading}
+                              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                              style={{backgroundColor: '#e6f7f9', color: '#0A5569'}}
+                            >
+                              {loading ? 'Extracting...' : 'Extract Text Only'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleAnalyzeImage}
+                              disabled={loading}
+                              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                              style={{backgroundColor: '#0A5569'}}
+                            >
+                              {loading ? 'Analyzing...' : 'Extract & Analyze'}
+                            </button>
+                          </div>
+                          {extractedText && (
+                            <div className="mt-2 p-2 rounded bg-gray-50 text-sm text-gray-700 max-h-32 overflow-y-auto border" style={{borderColor: '#b3dfe6'}}>
+                              <p className="font-semibold mb-1 text-xs">Extracted Text ({extractedText.length} chars):</p>
+                              <p className="text-xs">{extractedText}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Text or Passage
@@ -268,7 +467,7 @@ function Analyzer() {
                   <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="Enter a poem, historical text, cultural reference, or any passage you'd like to understand better..."
+                    placeholder="Enter a poem, historical text, cultural reference, or any passage you'd like to understand better... Or upload an image above to extract text automatically."
                     className="input-field min-h-[200px] resize-y"
                     disabled={loading}
                   />

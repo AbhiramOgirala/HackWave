@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status, Header
+from fastapi import FastAPI, HTTPException, Depends, status, Header, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
@@ -395,6 +395,184 @@ async def analyze_text(
         raise HTTPException(
             status_code=500,
             detail=f"Error analyzing text: {str(e)}"
+        )
+
+
+class OCRResponse(BaseModel):
+    success: bool
+    text: str
+    character_count: Optional[int] = None
+    word_count: Optional[int] = None
+    error: Optional[str] = None
+    mime_type: Optional[str] = None
+
+
+@app.post("/api/ocr/extract", response_model=OCRResponse)
+async def extract_text_from_image(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(verify_token)
+):
+    """
+    Extract text from uploaded image using Gemini Vision API
+    
+    Args:
+        file: Image file (JPG, PNG, etc.)
+    
+    Returns:
+        Extracted text and metadata
+    """
+    
+    # Validate file type
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=400,
+            detail="File must be an image (JPG, PNG, etc.)"
+        )
+    
+    # Read image data
+    try:
+        image_data = await file.read()
+        
+        if len(image_data) > 20 * 1024 * 1024:  # 20MB limit for Gemini
+            raise HTTPException(
+                status_code=400,
+                detail="Image file too large. Maximum size is 20MB."
+            )
+        
+        # Extract text using Gemini Vision API
+        result = await gemini_service.extract_text_from_image(
+            image_data, 
+            mime_type=file.content_type or "image/jpeg"
+        )
+        
+        return OCRResponse(**result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error extracting text from image: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing image: {str(e)}"
+        )
+
+
+@app.post("/api/analyze/image", response_model=AnalysisResponse)
+async def analyze_image(
+    file: UploadFile = File(...),
+    language: str = Form(default='en'),
+    current_user: dict = Depends(verify_token)
+):
+    """
+    Extract text from image and analyze it for cultural context
+    
+    Args:
+        file: Image file containing text
+        language: Output language for analysis (default: 'en')
+        current_user: Authenticated user (from token)
+    
+    Returns:
+        Cultural analysis of the extracted text
+    """
+    
+    # Validate file type
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=400,
+            detail="File must be an image (JPG, PNG, etc.)"
+        )
+    
+    try:
+        # Read image data
+        image_data = await file.read()
+        
+        if len(image_data) > 20 * 1024 * 1024:  # 20MB limit for Gemini
+            raise HTTPException(
+                status_code=400,
+                detail="Image file too large. Maximum size is 20MB."
+            )
+        
+        # Extract text using Gemini Vision API
+        print(f"📸 Extracting text from uploaded image using Gemini Vision...")
+        ocr_result = await gemini_service.extract_text_from_image(
+            image_data, 
+            mime_type=file.content_type or "image/jpeg"
+        )
+        
+        if not ocr_result.get('success'):
+            raise HTTPException(
+                status_code=400,
+                detail=ocr_result.get('error', 'Failed to extract text from image')
+            )
+        
+        extracted_text = ocr_result.get('text', '').strip()
+        
+        if len(extracted_text) < 10:
+            raise HTTPException(
+                status_code=400,
+                detail="Extracted text is too short (less than 10 characters). Please ensure the image contains readable text."
+            )
+        
+        print(f"✅ Extracted {len(extracted_text)} characters from image")
+        
+        # Now analyze the extracted text using the regular analyze endpoint logic
+        # Check Supabase persistent cache first
+        print(f"🔍 Checking Supabase cache...")
+        cached_result = get_cached_analysis(extracted_text, language or "en")
+        
+        if cached_result:
+            print(f"🎯 Cache HIT! Skipping Gemini API call...")
+            analysis_result = cached_result
+        else:
+            print(f"❌ Cache MISS. Calling Gemini API...")
+            
+            # Call Gemini API
+            analysis_result = await gemini_service.analyze_cultural_context(
+                text=extracted_text,
+                language=language or "en"
+            )
+            
+            # Save to Supabase cache for future requests
+            print(f"💾 Saving to Supabase cache...")
+            save_analysis_cache(extracted_text, language or "en", analysis_result)
+        
+        # Extract and enrich cultural entities with NLP
+        print("🔍 Extracting cultural entities with NLP...")
+        entity_analysis = nlp_service.analyze_text_with_entities(
+            text=extracted_text,
+            enrich_all=True
+        )
+        
+        # Prepare data for Supabase
+        analysis_data = {
+            'input_text': extracted_text,
+            'language': language,
+            'cultural_origin': analysis_result["cultural_origin"],
+            'cross_cultural_connections': analysis_result["cross_cultural_connections"],
+            'modern_analogy': analysis_result["modern_analogy"],
+            'image_url': None,
+            'timeline_events': analysis_result.get("timeline_events", []),
+            'geographic_locations': analysis_result.get("geographic_locations", []),
+            'key_concepts': analysis_result.get("key_concepts", []),
+            'external_resources': analysis_result.get("external_resources", {}),
+            'detected_entities': entity_analysis.get("detected_entities", []),
+            'created_at': datetime.utcnow().isoformat()
+        }
+        
+        # Save to Supabase with user_id
+        saved_analysis = save_analysis(analysis_data, user_id=current_user['id'])
+        
+        print(f"✅ Analysis completed with {entity_analysis.get('enriched_count', 0)} enriched entities")
+        
+        return saved_analysis
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in analyze_image: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error analyzing image: {str(e)}"
         )
 
 

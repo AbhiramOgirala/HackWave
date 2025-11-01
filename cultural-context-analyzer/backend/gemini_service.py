@@ -227,6 +227,84 @@ Return ONLY valid JSON. Do not include any text before or after the JSON object.
                 "external_resources": {}
             }
     
+    async def extract_text_from_image(self, image_data: bytes, mime_type: str = "image/jpeg") -> dict:
+        """
+        Extract text from image using Gemini Vision API
+        
+        Args:
+            image_data: Image file bytes
+            mime_type: MIME type of the image (e.g., 'image/jpeg', 'image/png')
+        
+        Returns:
+            Dictionary with extracted text and metadata
+        """
+        try:
+            import io
+            from PIL import Image
+            
+            # Open image from bytes to validate and convert to PIL Image
+            image = Image.open(io.BytesIO(image_data))
+            
+            # Prompt for text extraction
+            prompt = """Extract all text from this image. Return only the extracted text, preserving the original structure and formatting as much as possible. 
+If there are multiple paragraphs or sections, separate them with line breaks. 
+Do not add any explanations, comments, or analysis - just return the raw text content."""
+
+            print(f"📸 Extracting text from image using Gemini Vision API...")
+            
+            # Use vision model to extract text
+            # Pass PIL Image directly - Gemini API handles it
+            response = self.vision_model.generate_content(
+                [prompt, image],
+                generation_config={
+                    "temperature": 0.1,  # Low temperature for accurate text extraction
+                    "top_p": 0.95,
+                    "top_k": 40,
+                    "max_output_tokens": 4096,
+                }
+            )
+            
+            # Check if response was blocked
+            if not response or not response.text:
+                print(f"⚠️ Response blocked or empty. Safety ratings: {response.prompt_feedback if response else 'No response'}")
+                return {
+                    "success": False,
+                    "text": "",
+                    "error": "Unable to extract text from this image. The content may have triggered safety filters or the image quality is too poor."
+                }
+            
+            extracted_text = response.text.strip()
+            
+            if not extracted_text:
+                return {
+                    "success": False,
+                    "text": "",
+                    "error": "No text could be extracted from the image. Please ensure the image contains readable text."
+                }
+            
+            word_count = len(extracted_text.split())
+            character_count = len(extracted_text)
+            
+            print(f"✅ Extracted {character_count} characters ({word_count} words) from image")
+            
+            return {
+                "success": True,
+                "text": extracted_text,
+                "character_count": character_count,
+                "word_count": word_count,
+                "mime_type": mime_type
+            }
+            
+        except Exception as e:
+            print(f"❌ Error extracting text from image: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "success": False,
+                "text": "",
+                "error": f"Error extracting text from image: {str(e)}"
+            }
+
 
 # Create singleton instance
 gemini_service = GeminiService()
